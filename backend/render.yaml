@@ -3,7 +3,8 @@ services:
     name: acg-backend
     env: python
     region: oregon
-    buildCommand: "pip install -r requirements.txt"
+    pythonVersion: "3.11"
+    buildCommand: "pip install --no-cache-dir -r requirements.txt"
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: SUPABASE_URL
