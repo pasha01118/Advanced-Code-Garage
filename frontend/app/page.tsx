@@ -1,6 +1,76 @@
-import { Terminal, Cpu, ShieldCheck, Activity } from "lucide-react";
+"use client"; // Required for useEffect and useState in Next.js App Router
+
+import { Terminal, Cpu, ShieldCheck, Activity, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+
+// Define types matching the backend schema
+interface AgentStatus {
+  name: string;
+  role: string;
+  status: string;
+  current_task: string | null;
+}
+
+interface SwarmResponse {
+  active_agents: AgentStatus[];
+  system_mode: string;
+  security_gate: string;
+}
 
 export default function Home() {
+  const [swarmData, setSwarmData] = useState<SwarmResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSwarm = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const response = await fetch(`${apiUrl}/api/v1/agents/swarm`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.statusText}`);
+        }
+        
+        const data: SwarmResponse = await response.json();
+        setSwarmData(data);
+      } catch (err) {
+        console.error("Error fetching swarm data:", err);
+        setError("Unable to connect to Agent Swarm. Is the backend running?");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSwarm();
+    // Optional: Poll every 10 seconds for live updates
+    const interval = setInterval(fetchSwarm, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+          <p className="text-sm text-slate-400">Initializing Agent Swarm...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-red-400 p-6">
+        <div className="bg-slate-900 border border-red-900 rounded-xl p-6 max-w-md text-center">
+          <ShieldCheck className="w-12 h-12 mx-auto mb-4 text-red-500" />
+          <h2 className="text-xl font-bold mb-2">Connection Error</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -11,8 +81,12 @@ export default function Home() {
             <span className="font-bold text-xl tracking-tight">Advanced Code Garage</span>
           </div>
           <div className="flex items-center gap-4 text-sm text-slate-400">
-            <span className="flex items-center gap-1"><Activity className="w-4 h-4 text-green-500" /> System Online</span>
-            <span className="px-2 py-1 bg-slate-800 rounded text-xs">Mode: AI-Man</span>
+            <span className="flex items-center gap-1">
+              <Activity className="w-4 h-4 text-green-500" /> System Online
+            </span>
+            <span className="px-2 py-1 bg-slate-800 rounded text-xs border border-slate-700">
+              Mode: {swarmData?.system_mode}
+            </span>
           </div>
         </div>
       </header>
@@ -27,29 +101,32 @@ export default function Home() {
               <Terminal className="w-5 h-5 text-purple-400" /> Active Agent Swarm
             </h2>
             <div className="space-y-3">
-              {[
-                { name: "Mr. Ravish Kumar", role: "Research Lead", status: "Analyzing Market...", color: "text-blue-400" },
-                { name: "Mr. Arman Ali Khan", role: "Full Stack Arch", status: "Idle", color: "text-slate-400" },
-                { name: "Mr. Sadath Ali Khan", role: "Security Auditor", status: "Monitoring...", color: "text-red-400" },
-                { name: "Ms. Kulsum", role: "Token Economist", status: "Optimizing Context", color: "text-yellow-400" },
-              ].map((agent, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-slate-950 rounded-lg border border-slate-800/50">
+              {swarmData?.active_agents.map((agent, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-slate-950 rounded-lg border border-slate-800/50 hover:border-slate-700 transition-colors">
                   <div>
-                    <div className={`font-medium ${agent.color}`}>{agent.name}</div>
+                    <div className="font-medium text-slate-200">{agent.name}</div>
                     <div className="text-xs text-slate-500">{agent.role}</div>
                   </div>
-                  <div className="text-xs font-mono text-slate-400">{agent.status}</div>
+                  <div className="text-right">
+                    <div className="text-xs font-mono text-blue-400 mb-1">{agent.status}</div>
+                    {agent.current_task && (
+                      <div className="text-[10px] text-slate-600 bg-slate-900 px-2 py-0.5 rounded inline-block">
+                        {agent.current_task}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* Terminal Output Mockup */}
-          <section className="bg-black border border-slate-800 rounded-xl p-4 font-mono text-xs h-64 overflow-y-auto">
+          {/* Terminal Output Mockup (Static for now, will be dynamic later) */}
+          <section className="bg-black border border-slate-800 rounded-xl p-4 font-mono text-xs h-64 overflow-y-auto shadow-inner">
             <div className="text-slate-500 mb-2"># System Log initialized...</div>
             <div className="text-green-400">[OK] Connected to Supabase Vector DB</div>
             <div className="text-blue-400">[INFO] Git-Sir awaiting input...</div>
-            <div className="text-slate-400 animate-pulse">_</div>
+            <div className="text-yellow-400">[WARN] Token optimization active (Ms. Kulsum)</div>
+            <div className="text-slate-400 animate-pulse mt-2">_</div>
           </section>
         </div>
 
@@ -60,15 +137,15 @@ export default function Home() {
               <ShieldCheck className="w-5 h-5 text-green-500" /> Security Gate
             </h2>
             <div className="text-sm text-slate-400 space-y-2">
-              <p>Zero-Tolerance Audit: <span className="text-green-500">Active</span></p>
-              <p>Secrets Scan: <span className="text-green-500">Clean</span></p>
-              <p>Branch Protection: <span className="text-blue-500">Enforced</span></p>
+              <p>Zero-Tolerance Audit: <span className="text-green-500 font-mono">{swarmData?.security_gate}</span></p>
+              <p>Secrets Scan: <span className="text-green-500 font-mono">Clean</span></p>
+              <p>Branch Protection: <span className="text-blue-500 font-mono">Enforced</span></p>
             </div>
           </section>
           
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
              <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-             <button className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition">
+             <button className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition shadow-lg shadow-blue-900/20">
                Initialize New Project
              </button>
           </section>
