@@ -9,12 +9,18 @@ app = FastAPI(
 )
 
 # CORS Configuration for Frontend
-# Use environment variable for production frontend URL
-frontend_url = os.getenv("FRONTEND_URL", "https://advanced-code-garage.vercel.app")
-origins = [
-    "http://localhost:3000",
-    frontend_url,
-]
+# Accept comma-separated origins via FRONTEND_URLS env var for flexibility
+cors_env = os.getenv("FRONTEND_URLS", "")
+if cors_env:
+    origins = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
+else:
+    origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://advanced-code-garage.vercel.app",
+        "https://advanced-code-garage-rgke.vercel.app",
+        "https://www.advanced-code-garage-rgke.vercel.app",
+    ]
 
 app.add_middleware(
     CORSMiddleware,

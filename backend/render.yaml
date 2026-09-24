@@ -20,7 +20,7 @@ services:
         sync: false
       - key: OLLAMA_BASE_URL
         value: "http://localhost:11434"
-      - key: FRONTEND_URL
-        value: "https://advanced-code-garage.vercel.app"
+      - key: FRONTEND_URLS
+        value: "http://localhost:3000,https://advanced-code-garage-rgke.vercel.app,https://advanced-code-garage.vercel.app"
       - key: ENVIRONMENT
         value: "production"
