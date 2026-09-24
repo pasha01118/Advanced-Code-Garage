@@ -6,3 +6,5 @@ nodeLinker: hoisted
 
 onlyBuiltDependencies:
   - "unrs-resolver"
+
+dangerouslyAllowAllBuilds: true
