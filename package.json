@@ -2,7 +2,7 @@
   "name": "advanced-code-garage",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@11.27.1",
+  "packageManager": "pnpm@12.6.0",
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "cd apps/backend && python -m uvicorn app.main:app --reload",
