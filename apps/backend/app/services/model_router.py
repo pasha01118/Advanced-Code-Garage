@@ -9,7 +9,7 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3.6-flash"
 OLLAMA_MODEL = "llama3.2"
 GEMINI_TIMEOUT_SECONDS = 12.0
 OLLAMA_TIMEOUT_SECONDS = 20.0

@@ -11,7 +11,7 @@ _bearer = HTTPBearer(auto_error=False)
 _jwks_cache: dict | None = None
 _jwks_at: float = 0.0
 JWKS_TTL_SECONDS = 3600.0
-ALGORITHMS = ["RS256"]
+ALGORITHMS = ["ES256", "RS256"]
 
 
 async def _get_jwks() -> dict:
