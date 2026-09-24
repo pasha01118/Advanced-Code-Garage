@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 1440
 
     google_ai_studio_key: str = ""
+    google_ai_studio_proxy: str = ""
+    google_ai_studio_proxy_token: str = ""
     ollama_base_url: str = "http://localhost:11434"
 
     frontend_urls: str = ""

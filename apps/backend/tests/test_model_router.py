@@ -5,6 +5,7 @@ import httpx
 from app.core.config import Settings
 from app.services.model_router import (
     GeminiProvider,
+    GeminiProxyProvider,
     ModelRouter,
     OllamaProvider,
     SimulatedProvider,
@@ -28,6 +29,24 @@ def test_router_prefers_gemini_when_key_set():
     router = ModelRouter(_settings(google_ai_studio_key="abc"))
     provider = router.resolve()
     assert isinstance(provider, GeminiProvider)
+
+
+def test_router_prefers_proxy_when_key_and_proxy_set():
+    router = ModelRouter(
+        _settings(
+            google_ai_studio_key="abc",
+            google_ai_studio_proxy="https://fe.vercel.app/",
+            google_ai_studio_proxy_token="tok",
+        )
+    )
+    provider = router.resolve()
+    assert isinstance(provider, GeminiProxyProvider)
+    assert provider.base_url == "https://fe.vercel.app"
+
+
+def test_router_uses_gemini_direct_without_proxy():
+    router = ModelRouter(_settings(google_ai_studio_key="abc", google_ai_studio_proxy=""))
+    assert isinstance(router.resolve(), GeminiProvider)
 
 
 def test_router_uses_ollama_when_no_gemini_key():
@@ -82,6 +101,15 @@ def test_gemini_error_cascades_in_router(monkeypatch):
     text, provider = asyncio.run(router.complete("hello"))
     assert provider == "simulated"
     assert text.startswith("[offline]")
+
+
+def test_gemini_proxy_parses_and_sends_auth(monkeypatch):
+    _patch_httpx(
+        monkeypatch,
+        lambda request: httpx.Response(200, json={"text": " proxied text "}),
+    )
+    provider = GeminiProxyProvider("https://fe.example.com/", "secret-tok")
+    assert asyncio.run(provider.complete("do it")) == "proxied text"
 
 
 def test_ollama_parses_response(monkeypatch):
