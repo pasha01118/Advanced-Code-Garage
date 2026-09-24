@@ -1,32 +1,51 @@
-from fastapi import APIRouter, HTTPException
+from typing import Annotated, Optional
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-import datetime
+
+from app.core.auth import require_authenticated
+from app.schemas.project import ProjectListOut, ProjectOut
+from app.services.project import ProjectService
 
 router = APIRouter()
+
 
 class ProjectInitRequest(BaseModel):
     name: str
     description: Optional[str] = None
     repo_url: Optional[str] = None
 
-@router.post("/")
-async def initialize_project(req: ProjectInitRequest):
-    # Placeholder: In production, this triggers Git-Sir agent swarm
-    return {
-        "status": "initialized",
-        "project_id": f"proj_{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-        "name": req.name,
-        "message": f"Agent Swarm activated for '{req.name}'. Ravish is analyzing requirements...",
-        "agents_assigned": ["Mr. Ravish Kumar", "Mr. Arman Ali Khan"]
-    }
 
-@router.get("/{project_id}")
-async def get_project_status(project_id: str):
-    return {
-        "project_id": project_id,
-        "status": "analyzing",
-        "progress": 35,
-        "current_agent": "Mr. Ravish Kumar",
-        "task": "Market Mapping & Requirements Analysis"
-    }
+AuthenticatedUser = Annotated[dict, Depends(require_authenticated)]
+
+
+def get_project_service() -> ProjectService:
+    return ProjectService()
+
+
+@router.post("/", response_model=ProjectOut)
+async def initialize_project(
+    req: ProjectInitRequest,
+    user: AuthenticatedUser,
+    service: ProjectService = Depends(get_project_service),
+) -> ProjectOut:
+    owner_id = user.get("sub")
+    project = await service.create(req.name, req.description, req.repo_url, owner_id)
+    return ProjectOut(**project)
+
+
+@router.get("/", response_model=ProjectListOut)
+async def list_projects(user: AuthenticatedUser, service: ProjectService = Depends(get_project_service)) -> ProjectListOut:
+    return ProjectListOut(projects=await service.list_recent())
+
+
+@router.get("/{project_id}", response_model=ProjectOut)
+async def get_project_status(
+    project_id: str,
+    user: AuthenticatedUser,
+    service: ProjectService = Depends(get_project_service),
+) -> ProjectOut:
+    project = await service.get(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return ProjectOut(**project)

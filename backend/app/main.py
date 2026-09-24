@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import os
+
+from app.core.config import get_settings
+
+settings = get_settings()
 
 app = FastAPI(
     title="Advanced Code Garage API",
@@ -9,27 +12,13 @@ app = FastAPI(
 )
 
 # CORS Configuration for Frontend
-# Accept comma-separated exact origins via FRONTEND_URLS env var (flexibility),
-# PLUS regex so ANY *.vercel.app (including every preview/alias deployment)
-# and localhost dev origins are always allowed.
-cors_env = os.getenv("FRONTEND_URLS", "")
-if cors_env:
-    origins = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
-else:
-    origins = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://advanced-code-garage.vercel.app",
-        "https://advanced-code-garage-rgke.vercel.app",
-        "https://www.advanced-code-garage-rgke.vercel.app",
-    ]
-
-cors_regex = os.getenv("FRONTEND_ORIGIN_REGEX", r"https://[a-zA-Z0-9-]+\.vercel\.app")
-
+# Exact origins come from FRONTEND_URLS (comma-separated), with a regex so ANY
+# *.vercel.app (including every preview/alias deployment) plus localhost dev
+# origins are always allowed.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=cors_regex,
+    allow_origins=settings.cors_origins,
+    allow_origin_regex=settings.frontend_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
