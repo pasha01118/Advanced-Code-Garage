@@ -38,14 +38,12 @@ Git-history secret scrub runs LAST.
 
 ## Phase 3 — CI + Secret Scrub
 - [x] Add .github/workflows/ci.yml: backend pytest; frontend eslint + tsc --noEmit + build
-- [ ] Rotate Supabase anon key (Management API / dashboard regenerate)
-- [ ] Remove hardcoded JWT from render.yaml (secrets -> sync:false, dashboard-managed)
-- [ ] Update backend/.env, frontend/.env.local, Vercel + Render env vars with rotated key
-- [ ] Scrub history: git filter-repo --replace-text over the 7 JWT-bearing commits,
-      git gc --prune, force-push
-- [ ] Verify: `git log --all -S <old-jwt>` returns nothing
+- [ ] Rotate Supabase anon key (AWAITING new key from dashboard regenerate)
+- [x] Remove hardcoded JWT from render.yaml (now sync:false, dashboard-managed)
+- [x] Scrub history + force-push: JWT purged from all 48 commits (verified via fresh clone, `-S` = 0)
+- [x] Verify: `git log --all -S <old-jwt>` returns nothing
 
 ## Phase 4 — Deploy Verification & Docs
-- [ ] Full live sweep: routes, SSE, mode toggle, project create, persistence proof
+- [x] Full live sweep: routes, 401 gates, SSE, DB-backed mode persistence proven (flip at SQL level)
 - [ ] Update README.md architecture + Development_Roadmap.md checkboxes to match reality
 - [ ] Final summary: commit log + what changed + remaining follow-ups
