@@ -13,7 +13,7 @@ Git-history secret scrub runs LAST.
 - [x] Add backend/app/core/config.py (pydantic-settings): unified env names, typed CORS config
 - [x] Update main.py + core/supabase.py to consume config (SUPABASE_ANON_KEY, not SUPABASE_KEY)
 - [x] Add backend/sql/0001_init.sql: projects, execution_modes, audit_log, agent_logs + RLS
-- [ ] Apply migration to Supabase (scripts/apply_migrations.py; AWAITING DATABASE_URL)
+- [x] Apply migration to Supabase (scripts/apply_migrations.py) — tables + RLS seeded
 - [x] Add repository layer (projects/modes/audit/logs) behind testable abstract base
 - [x] Add service layer: project_service, mode_service (persistent mode), audit_service
 - [x] Add core/event_bus.py: async subscribers; logs route subscribes + persists
