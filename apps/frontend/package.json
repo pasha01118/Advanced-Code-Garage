@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "gen:api": "openapi-typescript ../backend/openapi.json -o lib/generated/api.ts"
+    "gen:api": "openapi-typescript ../../packages/contract/openapi.json -o ../../packages/contract/generated/api.ts"
   },
   "dependencies": {
+    "@acg/contract": "workspace:*",
     "@supabase/supabase-js": "^2.117.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.47.0",
@@ -28,8 +29,5 @@
     "openapi-typescript": "^7.13.0",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "allowScripts": {
-    "unrs-resolver@1.12.2": true
   }
 }

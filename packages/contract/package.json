@@ -1,0 +1,20 @@
+{
+  "name": "@acg/contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    },
+    "./generated/api": {
+      "types": "./generated/api.ts"
+    }
+  },
+  "files": [
+    "src",
+    "generated",
+    "openapi.json"
+  ]
+}
