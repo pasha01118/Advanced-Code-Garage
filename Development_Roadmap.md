@@ -6,7 +6,8 @@
 - [x] Initialize repository structure (pnpm monorepo: FastAPI backend, Next.js frontend, packages/contract).
 - [x] Configure Supabase (PostgreSQL, RLS) — NOTE: pgvector embeddings not yet provisioned.
 - [x] Implement secure authentication (Supabase client auth; backend ES256/RS256 JWT verification).
-- [ ] Implement the encrypted BYOK (Bring Your Own Key) vault.
+- [x] Implement the encrypted BYOK (Bring Your Own Key) vault
+      (Fernet-encrypted per-user provider keys in `user_ai_keys` + RLS; live `sql/0002_ai_keys.sql`).
 - [ ] Establish baseline Docker environment.
 
 ## Phase 2: AI Orchestration & Routing Engine
@@ -35,6 +36,8 @@
 - [x] Build Agent Playground UI and real-time terminal (SSE).
 - [x] Implement 3 Execution Mode toggles (Autonomous, AI-Man, Manual) — persisted in Supabase.
 - [x] Develop Secret Admin Control Panel (RBAC, kill switches).
+- [x] Build AI Integration dashboard (11-provider catalog, connect keys, live model lists,
+      LED connectivity status, Ollama modal).
 
 ## Phase 7: Hardening, Resilience & Testing
 - [ ] Implement `offline_cache.py` for WAN resilience.

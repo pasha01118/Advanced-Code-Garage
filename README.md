@@ -298,19 +298,21 @@ advanced-code-garage/
 │   │   │   │   ├── config.py         # pydantic-settings (typed env config)
 │   │   │   │   ├── supabase.py       # service-role-first Supabase client
 │   │   │   │   ├── auth.py           # ES256/RS256 JWT verification (Supabase JWKS)
+│   │   │   │   ├── crypto.py         # Fernet encrypt/decrypt for user provider keys
 │   │   │   │   └── event_bus.py      # in-process async pub/sub for SSE
-│   │   │   ├── repositories/         # Supabase data access (projects/modes/audit/logs)
-│   │   │   ├── services/             # mode, project (pipeline), audit, model_router
+│   │   │   ├── repositories/         # Supabase data access (projects/modes/audit/logs/ai_keys)
+│   │   │   ├── services/             # mode, project (pipeline), audit, model_router, ai_integration, ai_catalog
 │   │   │   ├── routers/              # /api/v1/agents (swarm + mode)
-│   │   │   └── api/v1/               # /api/v1/projects, /api/v1/logs (SSE stream)
+│   │   │   └── api/v1/               # /api/v1/projects, /api/v1/logs (SSE), /api/v1/ai (catalog/keys/models)
 │   │   ├── schemas/                  # Pydantic response/request models
 │   │   ├── sql/0001_init.sql         # Tables + RLS policies (idempotent migrations)
+│   │   ├── sql/0002_ai_keys.sql      # user_ai_keys (encrypted BYOK vault) + RLS
 │   │   ├── scripts/apply_migrations.py # psycopg migration runner
 │   │   ├── tests/                    # pytest + TestClient with in-memory fakes
 │   │   ├── render.yaml               # Render blueprint (secrets dashboard-managed)
 │   │   └── requirements.txt
 │   └── frontend/
-│       ├── app/                      # Next.js App Router (dashboard, terminal, projects, admin, login, genai)
+│       ├── app/                      # Next.js App Router (dashboard, terminal, projects, ai-integration, admin, login, genai)
 │       ├── components/               # LiveTerminal etc.
 │       ├── lib/                      # api.ts, types.ts (@acg/contract), supabaseClient.ts, hooks
 │       ├── vercel.json               # /api/* → Render rewrite
@@ -332,8 +334,13 @@ advanced-code-garage/
 > sandboxing, voice, ChatOps, and CI-webhook modules remain future work.
 > The current backend provides real persistence (Supabase), ES256 auth, mode
 > routing, a real model router (Google Gemini direct or via a first-party Vercel
-> proxy, falling back to Ollama/simulated), the project pipeline, and the SSE log
-> stream the UI consumes. The free-tier Google key caps Gemini at ~20 requests/day
+> proxy, falling back to Ollama/simulated), the project pipeline, the SSE log
+> stream the UI consumes, and an AI Integration vault: 11 free-tier providers
+> (OpenRouter, Groq, SambaNova, Cerebras, DeepSeek, Qwen, Mistral, Cohere, xAI,
+> Ollama, plus Google) whose per-user API keys are Fernet-encrypted at rest
+> (`user_ai_keys`, RLS) and validated on first connect via a cheap models-list
+> call, with live model lists (session-cached) surfaced on the `/ai-integration`
+> dashboard. The free-tier Google key caps Gemini at ~20 requests/day
 > on `gemini-3.6-flash`; when that quota is exhausted the pipeline degrades
 > gracefully to staged simulated output.
 
@@ -369,7 +376,8 @@ pnpm install
 
 # 3. Configure credentials
 #   - apps/backend/.env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SECRET_KEY,
-#     GOOGLE_AI_STUDIO_KEY, optional GOOGLE_AI_STUDIO_PROXY/_TOKEN, OLLAMA_BASE_URL
+#     GOOGLE_AI_STUDIO_KEY, optional GOOGLE_AI_STUDIO_PROXY/_TOKEN,
+#     USER_KEY_ENCRYPTION_KEY (defaults to SECRET_KEY), OLLAMA_BASE_URL
 #   - apps/frontend/.env.local: NEXT_PUBLIC_SUPABASE_URL,
 #     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
