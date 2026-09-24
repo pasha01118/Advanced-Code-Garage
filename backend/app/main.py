@@ -9,7 +9,9 @@ app = FastAPI(
 )
 
 # CORS Configuration for Frontend
-# Accept comma-separated origins via FRONTEND_URLS env var for flexibility
+# Accept comma-separated exact origins via FRONTEND_URLS env var (flexibility),
+# PLUS regex so ANY *.vercel.app (including every preview/alias deployment)
+# and localhost dev origins are always allowed.
 cors_env = os.getenv("FRONTEND_URLS", "")
 if cors_env:
     origins = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
@@ -22,9 +24,12 @@ else:
         "https://www.advanced-code-garage-rgke.vercel.app",
     ]
 
+cors_regex = os.getenv("FRONTEND_ORIGIN_REGEX", r"https://[a-zA-Z0-9-]+\.vercel\.app")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=cors_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

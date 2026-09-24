@@ -22,27 +22,33 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);
   const [initResult, setInitResult] = useState<{ message?: string; project_id?: string; error?: string } | null>(null);
+  const [attempts, setAttempts] = useState(0);
   const inFlightRef = useRef(false);
+  const attemptRef = useRef(0);
 
   const fetchSwarm = async () => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
-    
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const timeout = setTimeout(() => controller.abort(), 90000);
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://agc-backend-ix19.onrender.com";
       const response = await fetch(`${apiUrl}/api/v1/agents/swarm`, { signal: controller.signal });
-      
+
       if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
-      
+
       const data: SwarmResponse = await response.json();
       setSwarmData(data);
       setError(null);
+      attemptRef.current = 0;
+      setAttempts(0);
     } catch (err) {
       console.error("Error fetching swarm:", err);
-      setError("Unable to connect to Agent Swarm. Retrying...");
+      attemptRef.current += 1;
+      setAttempts(attemptRef.current);
+      setError("Unable to connect to Agent Swarm. Backend may be waking up...");
     } finally {
       clearTimeout(timeout);
       inFlightRef.current = false;
@@ -77,13 +83,25 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true;
+    let interval: ReturnType<typeof setInterval>;
 
     const run = async () => {
       if (mounted) await fetchSwarm();
     };
 
+    const schedule = () => {
+      if (!mounted) return;
+      // Exponential backoff to handle slow cold starts: 5s -> 10s -> 20s -> 30s (max)
+      const attempts = attemptRef.current;
+      const delay = Math.min(5000 * Math.pow(2, Math.min(attempts, 3)), 30000);
+      interval = setTimeout(async () => {
+        await fetchSwarm();
+        schedule();
+      }, delay);
+    };
+
     run();
-    const interval = setInterval(run, 5000);
+    schedule();
 
     return () => {
       mounted = false;
@@ -110,6 +128,9 @@ export default function Home() {
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             Auto-reconnecting to Agent Swarm...
           </div>
+          <p className="mt-2 text-[10px] text-slate-500">
+            Attempt {attempts} — backend may be on a sleeping free instance, waking up now.
+          </p>
         </div>
       </div>
     );
