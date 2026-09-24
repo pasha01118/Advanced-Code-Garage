@@ -40,7 +40,9 @@ async def health_check():
 from app.routers.agents import router as agents_router
 from app.api.v1.logs.route import router as logs_router
 from app.api.v1.projects.route import router as projects_router
+from app.api.v1.ai.route import router as ai_router
 
 app.include_router(agents_router)
 app.include_router(logs_router, prefix='/api/v1/logs', tags=['logs'])
 app.include_router(projects_router, prefix='/api/v1/projects', tags=['projects'])
+app.include_router(ai_router, prefix='/api/v1/ai', tags=['ai'])

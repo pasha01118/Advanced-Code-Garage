@@ -147,10 +147,210 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Provider Catalog
+         * @description Static catalog of curated free-tier AI providers.
+         */
+        get: operations["get_provider_catalog_api_v1_ai_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Keys */
+        get: operations["list_keys_api_v1_ai_keys_get"];
+        put?: never;
+        /**
+         * Save Key
+         * @description Save (encrypted) + immediately validate a provider key with a first API call.
+         */
+        post: operations["save_key_api_v1_ai_keys_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/keys/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Key */
+        delete: operations["delete_key_api_v1_ai_keys__provider__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/keys/{provider}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Key
+         * @description Re-run the provider's first API call to refresh the LED status.
+         */
+        post: operations["validate_key_api_v1_ai_keys__provider__validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/keys/{provider}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Provider Models
+         * @description Live model list (10-minute in-process session cache).
+         */
+        get: operations["list_provider_models_api_v1_ai_keys__provider__models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AIDeleteOut */
+        AIDeleteOut: {
+            /** Provider */
+            provider: string;
+            /** Deleted */
+            deleted: boolean;
+        };
+        /** AIKeyStatus */
+        AIKeyStatus: {
+            /** Provider */
+            provider: string;
+            /**
+             * Has Key
+             * @default false
+             */
+            has_key: boolean;
+            /**
+             * Status
+             * @default untested
+             */
+            status: string;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+            /**
+             * Model Count
+             * @default 0
+             */
+            model_count: number;
+            /** Last Validated At */
+            last_validated_at?: string | null;
+        };
+        /** AIKeyStatusListOut */
+        AIKeyStatusListOut: {
+            /**
+             * Entries
+             * @default []
+             */
+            entries: components["schemas"]["AIKeyStatus"][];
+        };
+        /** AIModelInfo */
+        AIModelInfo: {
+            /** Id */
+            id: string;
+            /** Context Length */
+            context_length?: number | null;
+            /** Owned By */
+            owned_by?: string | null;
+            /**
+             * Tags
+             * @description Loose labels (e.g. `:free`) parsed from the model id.
+             */
+            tags?: string[] | null;
+        };
+        /** AIModelListOut */
+        AIModelListOut: {
+            /** Provider */
+            provider: string;
+            /**
+             * Cached
+             * @default false
+             */
+            cached: boolean;
+            /**
+             * Models
+             * @default []
+             */
+            models: components["schemas"]["AIModelInfo"][];
+        };
+        /** AISaveKeyRequest */
+        AISaveKeyRequest: {
+            /** Provider */
+            provider: string;
+            /** Api Key */
+            api_key?: string | null;
+            /** Ollama Base Url */
+            ollama_base_url?: string | null;
+        };
+        /** AIValidateOut */
+        AIValidateOut: {
+            /** Provider */
+            provider: string;
+            /** Status */
+            status: string;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+            /**
+             * Model Count
+             * @default 0
+             */
+            model_count: number;
+            /**
+             * Models
+             * @default []
+             */
+            models: components["schemas"]["AIModelInfo"][];
+        };
         /** AgentStatus */
         AgentStatus: {
             /** Name */
@@ -233,6 +433,33 @@ export interface components {
             current_task?: string | null;
             /** Created At */
             created_at?: string | null;
+        };
+        /** ProviderCatalogEntry */
+        ProviderCatalogEntry: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Tagline */
+            tagline: string;
+            /** Description */
+            description: string;
+            /** Free Tier */
+            free_tier: string;
+            /** Signup Url */
+            signup_url: string;
+            /** Kind */
+            kind: string;
+            /** Requires Key */
+            requires_key: boolean;
+        };
+        /** ProviderCatalogListOut */
+        ProviderCatalogListOut: {
+            /**
+             * Providers
+             * @default []
+             */
+            providers: components["schemas"]["ProviderCatalogEntry"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -462,6 +689,172 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_provider_catalog_api_v1_ai_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderCatalogListOut"];
+                };
+            };
+        };
+    };
+    list_keys_api_v1_ai_keys_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIKeyStatusListOut"];
+                };
+            };
+        };
+    };
+    save_key_api_v1_ai_keys_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AISaveKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIValidateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_key_api_v1_ai_keys__provider__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIDeleteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_key_api_v1_ai_keys__provider__validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIValidateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_provider_models_api_v1_ai_keys__provider__models_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIModelListOut"];
                 };
             };
             /** @description Validation Error */

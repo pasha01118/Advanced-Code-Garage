@@ -263,10 +263,474 @@
           }
         }
       }
+    },
+    "/api/v1/ai/catalog": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Get Provider Catalog",
+        "description": "Static catalog of curated free-tier AI providers.",
+        "operationId": "get_provider_catalog_api_v1_ai_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderCatalogListOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/keys": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "List Keys",
+        "operationId": "list_keys_api_v1_ai_keys_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIKeyStatusListOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Save Key",
+        "description": "Save (encrypted) + immediately validate a provider key with a first API call.",
+        "operationId": "save_key_api_v1_ai_keys_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AISaveKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIValidateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/keys/{provider}": {
+      "delete": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Delete Key",
+        "operationId": "delete_key_api_v1_ai_keys__provider__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIDeleteOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/keys/{provider}/validate": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Validate Key",
+        "description": "Re-run the provider's first API call to refresh the LED status.",
+        "operationId": "validate_key_api_v1_ai_keys__provider__validate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIValidateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/keys/{provider}/models": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "List Provider Models",
+        "description": "Live model list (10-minute in-process session cache).",
+        "operationId": "list_provider_models_api_v1_ai_keys__provider__models_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIModelListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AIDeleteOut": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "deleted": {
+            "type": "boolean",
+            "title": "Deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "deleted"
+        ],
+        "title": "AIDeleteOut"
+      },
+      "AIKeyStatus": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "has_key": {
+            "type": "boolean",
+            "title": "Has Key",
+            "default": false
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "untested"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          },
+          "model_count": {
+            "type": "integer",
+            "title": "Model Count",
+            "default": 0
+          },
+          "last_validated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Validated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "title": "AIKeyStatus"
+      },
+      "AIKeyStatusListOut": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AIKeyStatus"
+            },
+            "type": "array",
+            "title": "Entries",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "AIKeyStatusListOut"
+      },
+      "AIModelInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "context_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Length"
+          },
+          "owned_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owned By"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags",
+            "description": "Loose labels (e.g. `:free`) parsed from the model id."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "AIModelInfo"
+      },
+      "AIModelListOut": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached",
+            "default": false
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/AIModelInfo"
+            },
+            "type": "array",
+            "title": "Models",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "title": "AIModelListOut"
+      },
+      "AISaveKeyRequest": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "ollama_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ollama Base Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "title": "AISaveKeyRequest"
+      },
+      "AIValidateOut": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          },
+          "model_count": {
+            "type": "integer",
+            "title": "Model Count",
+            "default": 0
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/AIModelInfo"
+            },
+            "type": "array",
+            "title": "Models",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "status"
+        ],
+        "title": "AIValidateOut"
+      },
       "AgentStatus": {
         "properties": {
           "name": {
@@ -492,6 +956,68 @@
           "name"
         ],
         "title": "ProjectOut"
+      },
+      "ProviderCatalogEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "tagline": {
+            "type": "string",
+            "title": "Tagline"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "free_tier": {
+            "type": "string",
+            "title": "Free Tier"
+          },
+          "signup_url": {
+            "type": "string",
+            "title": "Signup Url"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "requires_key": {
+            "type": "boolean",
+            "title": "Requires Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "tagline",
+          "description",
+          "free_tier",
+          "signup_url",
+          "kind",
+          "requires_key"
+        ],
+        "title": "ProviderCatalogEntry"
+      },
+      "ProviderCatalogListOut": {
+        "properties": {
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderCatalogEntry"
+            },
+            "type": "array",
+            "title": "Providers",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ProviderCatalogListOut"
       },
       "ValidationError": {
         "properties": {

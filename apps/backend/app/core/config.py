@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
 
     secret_key: str = "change-me"
+    # Optional dedicated key for encrypting user AI-provider API keys.
+    # Falls back to SECRET_KEY when unset.
+    user_key_encryption_key: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
 

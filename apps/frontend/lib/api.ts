@@ -1,9 +1,15 @@
 import type {
+  AIDeleteOut,
+  AIModelListOut,
+  AIKeyStatusListOut,
+  AIValidateOut,
+  AISaveKeyRequest,
   ExecutionMode,
   LogEntry,
   ProjectInitRequest,
   ProjectInitResponse,
   ProjectStatus,
+  ProviderCatalogListOut,
   SwarmResponse,
 } from "./types";
 import { supabase } from "./supabaseClient";
@@ -24,7 +30,14 @@ async function authHeaders(): Promise<Record<string, string>> {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init);
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`);
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (typeof body.detail === "string") detail = body.detail;
+    } catch {
+      // ignore non-JSON error bodies
+    }
+    throw new Error(detail);
   }
   return res.json() as Promise<T>;
 }
@@ -72,4 +85,38 @@ export function parseLogEvent(raw: string): LogEntry | null {
   } catch {
     return null;
   }
+}
+
+// -- AI Integration ----------------------------------------------------------
+
+export function getAICatalog(): Promise<ProviderCatalogListOut> {
+  return requestAuthed("/v1/ai/catalog");
+}
+
+export function getAIKeyStatuses(): Promise<AIKeyStatusListOut> {
+  return requestAuthed("/v1/ai/keys");
+}
+
+export function saveAIKey(payload: AISaveKeyRequest): Promise<AIValidateOut> {
+  return requestAuthed("/v1/ai/keys", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function validateAIKey(provider: string): Promise<AIValidateOut> {
+  return requestAuthed(`/v1/ai/keys/${encodeURIComponent(provider)}/validate`, {
+    method: "POST",
+  });
+}
+
+export function getAIModels(provider: string): Promise<AIModelListOut> {
+  return requestAuthed(`/v1/ai/keys/${encodeURIComponent(provider)}/models`);
+}
+
+export function deleteAIKey(provider: string): Promise<AIDeleteOut> {
+  return requestAuthed(`/v1/ai/keys/${encodeURIComponent(provider)}`, {
+    method: "DELETE",
+  });
 }

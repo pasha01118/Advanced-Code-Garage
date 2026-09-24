@@ -9,6 +9,7 @@ import {
   SquareTerminal,
   FolderGit2,
   ShieldCheck,
+  Sparkles,
   LogOut,
   Loader2,
   Activity,
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/terminal", label: "Terminal", icon: SquareTerminal },
   { href: "/projects", label: "Projects", icon: FolderGit2 },
+  { href: "/ai-integration", label: "AI Integration", icon: Sparkles },
   { href: "/admin", label: "Control Panel", icon: ShieldCheck },
 ];
 
