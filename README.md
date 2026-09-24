@@ -158,8 +158,8 @@
     </tr>
     <tr>
       <td style="color: #39ff14;"><b>Dynamic Model Router</b></td>
-      <td><code>Hardware Prober</code> + <code>Ollama</code> / <code>Gemini</code></td>
-      <td>Hardware-aware routing: routes lint tasks to local 0.5B–7B models, reserving Google AI Studio (Gemini Pro) for large contextual blueprints.</td>
+      <td><code>Gemini 3.6 Flash</code> + <code>Ollama</code></td>
+      <td>Hardware-aware routing: direct Google AI Studio calls or a first-party Vercel proxy (shared-secret, secret-redacted), falling back to local Ollama and finally a staged simulated mode.</td>
     </tr>
   </tbody>
 </table>
@@ -271,8 +271,8 @@
     <tr>
       <td style="color: #39ff14;"><b>Tier 3: Cloud BYOK</b></td>
       <td>Network Connected (BYOK Key)</td>
-      <td>Google AI Studio (<code>Gemini 2.5 Flash / Pro</code>)</td>
-      <td>High-context orchestration, enterprise architecture, market research.</td>
+      <td>Google AI Studio (<code>gemini-3.6-flash</code>)</td>
+      <td>High-context orchestration, enterprise architecture, market research. Free tier caps at ~20 requests/day; wire <code>GOOGLE_AI_STUDIO_PROXY</code>/<code>_TOKEN</code> to route via the first-party Vercel proxy when provider egress is throttled.</td>
     </tr>
   </tbody>
 </table>
@@ -288,47 +288,54 @@
 advanced-code-garage/
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml                    # Backend pytest + frontend lint/typecheck/build
+│       ├── ci.yml                    # Backend pytest + contract drift + frontend lint/typecheck/build
 │       └── keep-awake.yml            # Render free-tier keep-alive (every 10 min)
-├── backend/
-│   ├── app/
-│   │   ├── main.py                   # FastAPI entrypoint, CORS
-│   │   ├── core/
-│   │   │   ├── config.py             # pydantic-settings (typed env config)
-│   │   │   ├── supabase.py           # service-role-first Supabase client
-│   │   │   ├── auth.py               # RS256 JWT verification (Supabase JWKS)
-│   │   │   └── event_bus.py          # in-process async pub/sub for SSE
-│   │   ├── repositories/             # Supabase data access (projects/modes/audit/logs)
-│   │   ├── services/                 # mode, project (pipeline), audit services
-│   │   ├── routers/                  # /api/v1/agents (swarm + mode)
-│   │   └── api/v1/                   # /api/v1/projects, /api/v1/logs (SSE stream)
-│   ├── schemas/                      # Pydantic response/request models
-│   ├── sql/0001_init.sql             # Tables + RLS policies (idempotent migrations)
-│   ├── scripts/apply_migrations.py   # psycopg migration runner
-│   ├── tests/                        # pytest + TestClient with in-memory fakes
-│   ├── render.yaml                   # Render blueprint (secrets dashboard-managed)
-│   └── requirements.txt
-├── frontend/
-│   ├── app/                          # Next.js App Router (dashboard, terminal, projects, admin, login)
-│   ├── components/                   # LiveTerminal etc.
-│   ├── lib/
-│   │   ├── api.ts                    # typed API client (same-origin /api rewrite)
-│   │   ├── generated/api.ts          # openapi-typescript from backend/openapi.json
-│   │   ├── supabaseClient.ts         # Supabase client (publishable key)
-│   │   └── hooks                     # use-live-swarm, use-auth-session
-│   ├── vercel.json                   # /api/* → Render rewrite
-│   └── package.json
-├── openapi.json                      # Live FastAPI contract (source of truth)
-├── Development.md                    # Phased execution plan (this refactor)
+├── apps/
+│   ├── backend/
+│   │   ├── app/
+│   │   │   ├── main.py               # FastAPI entrypoint, CORS
+│   │   │   ├── core/
+│   │   │   │   ├── config.py         # pydantic-settings (typed env config)
+│   │   │   │   ├── supabase.py       # service-role-first Supabase client
+│   │   │   │   ├── auth.py           # ES256/RS256 JWT verification (Supabase JWKS)
+│   │   │   │   └── event_bus.py      # in-process async pub/sub for SSE
+│   │   │   ├── repositories/         # Supabase data access (projects/modes/audit/logs)
+│   │   │   ├── services/             # mode, project (pipeline), audit, model_router
+│   │   │   ├── routers/              # /api/v1/agents (swarm + mode)
+│   │   │   └── api/v1/               # /api/v1/projects, /api/v1/logs (SSE stream)
+│   │   ├── schemas/                  # Pydantic response/request models
+│   │   ├── sql/0001_init.sql         # Tables + RLS policies (idempotent migrations)
+│   │   ├── scripts/apply_migrations.py # psycopg migration runner
+│   │   ├── tests/                    # pytest + TestClient with in-memory fakes
+│   │   ├── render.yaml               # Render blueprint (secrets dashboard-managed)
+│   │   └── requirements.txt
+│   └── frontend/
+│       ├── app/                      # Next.js App Router (dashboard, terminal, projects, admin, login, genai)
+│       ├── components/               # LiveTerminal etc.
+│       ├── lib/                      # api.ts, types.ts (@acg/contract), supabaseClient.ts, hooks
+│       ├── vercel.json               # /api/* → Render rewrite
+│       └── package.json
+├── packages/
+│   └── contract/
+│       ├── openapi.json              # Live FastAPI contract (source of truth)
+│       ├── generated/api.ts          # openapi-typescript output (drift-checked in CI)
+│       └── src/index.ts              # @acg/contract typed re-exports
+├── pnpm-workspace.yaml               # pnpm monorepo apps/* + packages/*
+├── package.json                      # workspace root (packageManager: pnpm@12.6.0)
+├── pnpm-lock.yaml
+├── Development.md                    # Phased execution plan
 ├── Development_Roadmap.md            # Feature roadmap by phase
 └── README.md
 ```
 
-> **Note:** `orchestration_kernel.py`, `model_router.py`, `sentinel_healer.py`,
-> `security_vault.py`, sandboxing, voice, and webhook modules are future work —
-> the current backend provides the real persistence, auth, mode routing, project
-> pipeline, and SSE log stream that the UI consumes. The 12-agent roster shown in
-> the UI is the current Phase 4 target.
+> **Note:** `orchestration_kernel.py`, `sentinel_healer.py`, `security_vault.py`,
+> sandboxing, voice, ChatOps, and CI-webhook modules remain future work.
+> The current backend provides real persistence (Supabase), ES256 auth, mode
+> routing, a real model router (Google Gemini direct or via a first-party Vercel
+> proxy, falling back to Ollama/simulated), the project pipeline, and the SSE log
+> stream the UI consumes. The free-tier Google key caps Gemini at ~20 requests/day
+> on `gemini-3.6-flash`; when that quota is exhausted the pipeline degrades
+> gracefully to staged simulated output.
 
 ---
 
@@ -356,17 +363,19 @@ advanced-code-garage/
 git clone https://github.com/your-username/advanced-code-garage.git
 cd advanced-code-garage
 
-# 2. Setup isolated backend environment
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+# 2. Install workspace dependencies (pnpm 12.6.0)
+corepack enable && corepack prepare pnpm@12.6.0 --activate
+pnpm install
 
 # 3. Configure credentials
-cp .env.example .env
-# Provide: GEMINI_API_KEY, SUPABASE_URL, SUPABASE_KEY, ACG_VAULT_MASTER_KEY
+#   - apps/backend/.env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SECRET_KEY,
+#     GOOGLE_AI_STUDIO_KEY, optional GOOGLE_AI_STUDIO_PROXY/_TOKEN, OLLAMA_BASE_URL
+#   - apps/frontend/.env.local: NEXT_PUBLIC_SUPABASE_URL,
+#     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-# 4. Launch backend & UI
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-npm install && npm run dev
+# 4. Run backend & UI
+cd apps/backend && ./.venv/bin/uvicorn app.main:app --reload --port 8000
+cd apps/frontend && pnpm dev
 ```
 
 ---

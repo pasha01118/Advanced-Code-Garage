@@ -3,14 +3,15 @@
 *Note: This roadmap is structured by logical dependency and feature completion. No time, day, date, or week markers are assigned.*
 
 ## Phase 1: Core Infrastructure & Foundation
-- [x] Initialize repository structure (FastAPI backend, Next.js/React frontend).
+- [x] Initialize repository structure (pnpm monorepo: FastAPI backend, Next.js frontend, packages/contract).
 - [x] Configure Supabase (PostgreSQL, RLS) — NOTE: pgvector embeddings not yet provisioned.
-- [x] Implement secure authentication (Supabase client auth; backend RS256 JWT verification).
+- [x] Implement secure authentication (Supabase client auth; backend ES256/RS256 JWT verification).
 - [ ] Implement the encrypted BYOK (Bring Your Own Key) vault.
 - [ ] Establish baseline Docker environment.
 
 ## Phase 2: AI Orchestration & Routing Engine
-- [ ] Build `model_router.py`: Hardware-aware inference adapter (Ollama/Cloud).
+- [x] Build `model_router.py`: Hardware/provider-aware inference adapter
+      (Gemini 3.6 Flash direct or via Vercel proxy -> Ollama -> staged simulated). Live.
 - [ ] Build `context_compressor.py`: Token-hygiene logic to strip bloat.
 - [ ] Develop `orchestration_kernel.py`: Async event bus for state transitions.
 
@@ -20,10 +21,10 @@
 - [ ] Implement ephemeral sandbox environments.
 
 ## Phase 4: Multi-Agent Swarm Implementation
-- [ ] **Mr. Ravish Kumar (Research)**: Market/stack feasibility analysis.
-- [ ] **Mr. Arman Ali Khan (Engineering)**: Boilerplate and component logic synthesis.
-- [ ] **Mr. Sadath Ali Khan (Auditor)**: Zero-tolerance static analysis and security gate.
-- [ ] **Git-Sir (Orchestrator)**: Central UI-facing agent for mode switching.
+- [x] **Mr. Ravish Kumar (Research)**: Market/stack feasibility phase implemented (pipeline stage).
+- [x] **Mr. Arman Ali Khan (Engineering)**: Boilerplate and component logic synthesis (pipeline stage).
+- [x] **Mr. Sadath Ali Khan (Auditor)**: Zero-tolerance static analysis and security gate (pipeline stage).
+- [x] **Git-Sir (Orchestrator)**: Delivery orchestration + mode switching (pipeline stage + mode service).
 
 ## Phase 5: Deployment Pipeline & External Integrations
 - [ ] Integrate drivers for Cloudflare, Vercel, and Docker.
