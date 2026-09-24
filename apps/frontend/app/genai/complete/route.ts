@@ -64,8 +64,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "empty completion" }, { status: 502 });
     }
     return NextResponse.json({ text });
-  } catch {
-    return NextResponse.json({ error: "gemini request failed" }, { status: 502 });
+  } catch (err) {
+    const raw = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    const safe = apiKey ? raw.split(apiKey).join("***") : raw;
+    return NextResponse.json({ error: "gemini request failed", detail: safe.slice(0, 300) }, { status: 502 });
   } finally {
     clearTimeout(timer);
   }
