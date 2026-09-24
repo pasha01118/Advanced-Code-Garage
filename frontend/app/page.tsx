@@ -23,6 +23,7 @@ export default function Home() {
 
   const fetchSwarm = async () => {
     try {
+      // Fallback directly to Render URL if env var is missing during build
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://agc-backend-ix19.onrender.com";
       const response = await fetch(`${apiUrl}/api/v1/agents/swarm`);
       
@@ -41,7 +42,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchSwarm();
-    const interval = setInterval(fetchSwarm, 5000); // Poll every 5s
+    const interval = setInterval(fetchSwarm, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -67,7 +68,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-      {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -85,10 +85,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Panel: Agent Swarm */}
         <div className="lg:col-span-2 space-y-6">
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -114,7 +111,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Terminal Output */}
           <section className="bg-black border border-slate-800 rounded-xl p-4 font-mono text-xs h-64 overflow-y-auto shadow-inner">
             <div className="text-slate-500 mb-2"># System Log initialized...</div>
             <div className="text-green-400">[OK] Connected to Supabase Vector DB</div>
@@ -124,7 +120,6 @@ export default function Home() {
           </section>
         </div>
 
-        {/* Right Panel: Security & Actions */}
         <div className="space-y-6">
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
