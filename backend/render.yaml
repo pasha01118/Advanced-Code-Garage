@@ -11,7 +11,7 @@ services:
       - key: SUPABASE_URL
         value: "https://sdmvjjvvzbwnccwaeomh.supabase.co"
       - key: SUPABASE_ANON_KEY
-        value: "ACG_COMMITTED_ANON_KEY_PURGED"
+        sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: SECRET_KEY
