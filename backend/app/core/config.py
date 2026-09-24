@@ -21,7 +21,11 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: str = Field(
         default="",
-        validation_alias=AliasChoices("SUPABASE_ANON_KEY", "SUPABASE_KEY"),
+        validation_alias=AliasChoices(
+            "SUPABASE_PUBLISHABLE_KEY",
+            "SUPABASE_ANON_KEY",
+            "SUPABASE_KEY",
+        ),
     )
     supabase_service_role_key: str = ""
 
