@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Protocol
 
@@ -14,6 +15,8 @@ OLLAMA_MODEL = "llama3.2"
 GEMINI_TIMEOUT_SECONDS = 12.0
 OLLAMA_TIMEOUT_SECONDS = 20.0
 MAX_COMPLETION_TOKENS = 512
+RETRY_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = (1.0, 3.0)
 
 
 class CompletionProvider(Protocol):
@@ -27,9 +30,10 @@ class GeminiProvider:
 
     name = "gemini"
 
-    def __init__(self, api_key: str, model: str = GEMINI_MODEL) -> None:
+    def __init__(self, api_key: str, model: str = GEMINI_MODEL, retries: int = RETRY_ATTEMPTS) -> None:
         self.api_key = api_key
         self.model = model
+        self.retries = max(1, retries)
 
     async def complete(self, prompt: str) -> str:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
@@ -41,10 +45,28 @@ class GeminiProvider:
             },
         }
         timeout = httpx.Timeout(GEMINI_TIMEOUT_SECONDS)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            res = await client.post(url, params={"key": self.api_key}, json=payload)
-            res.raise_for_status()
-            data = res.json()
+        last_exc: Exception | None = None
+        for attempt in range(self.retries):
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    res = await client.post(url, params={"key": self.api_key}, json=payload)
+                    res.raise_for_status()
+                    data = res.json()
+                break
+            except Exception as exc:  # noqa: BLE001 - retry any transient provider failure
+                last_exc = exc
+                if attempt < self.retries - 1:
+                    backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
+                    logger.warning(
+                        "gemini attempt %d/%d failed (%s); retrying in %.1fs",
+                        attempt + 1,
+                        self.retries,
+                        exc,
+                        backoff,
+                    )
+                    await asyncio.sleep(backoff)
+        else:
+            raise RuntimeError(f"Gemini request failed after {self.retries} attempts: {last_exc}") from last_exc
         try:
             text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
         except (KeyError, IndexError, TypeError) as exc:
