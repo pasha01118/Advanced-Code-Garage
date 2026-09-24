@@ -32,6 +32,17 @@ def _redact(text: str, secret: str | None) -> str:
     return text
 
 
+class QuotaExceededError(RuntimeError):
+    """Raised when the upstream provider reports an exhausted quota."""
+
+
+def _is_quota_error(exc: Exception) -> bool:
+    """Best-effort detection of provider quota exhaustion (Google RESOURCE_EXHAUSTED)."""
+    fragment = str(exc)
+    marker = getattr(getattr(exc, "response", None), "text", "") or ""
+    return "quota" in f"{fragment} {marker}".lower()
+
+
 class GeminiProvider:
     """Google AI Studio (REST). Mirrors the README Tier-3 inference target."""
 
@@ -53,14 +64,18 @@ class GeminiProvider:
         }
         timeout = httpx.Timeout(GEMINI_TIMEOUT_SECONDS)
         last_exc: Exception | None = None
+        last_body = ""
         for attempt in range(self.retries):
             try:
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     res = await client.post(url, params={"key": self.api_key}, json=payload)
+                    last_body = res.text
                     res.raise_for_status()
                     data = res.json()
                 break
             except Exception as exc:  # noqa: BLE001 - retry any transient provider failure
+                if _is_quota_error(exc):
+                    raise QuotaExceededError("Google AI free-tier quota exhausted") from exc
                 last_exc = exc
                 if attempt < self.retries - 1:
                     backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
@@ -74,7 +89,8 @@ class GeminiProvider:
                     await asyncio.sleep(backoff)
         else:
             raise RuntimeError(
-                f"Gemini request failed after {self.retries} attempts: {_redact(str(last_exc), self.api_key)}"
+                f"Gemini request failed after {self.retries} attempts: "
+                f"{_redact(str(last_exc), self.api_key)} body={last_body[:300]!r}"
             ) from last_exc
         try:
             text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -110,6 +126,7 @@ class GeminiProxyProvider:
         url = f"{self.base_url}/genai/complete"
         timeout = httpx.Timeout(GEMINI_TIMEOUT_SECONDS * 3)
         last_exc: Exception | None = None
+        last_body = ""
         for attempt in range(self.retries):
             try:
                 async with httpx.AsyncClient(timeout=timeout) as client:
@@ -118,10 +135,13 @@ class GeminiProxyProvider:
                         headers={"Authorization": f"Bearer {self.token}"},
                         json={"prompt": prompt, "model": self.model},
                     )
+                    last_body = res.text
                     res.raise_for_status()
                     data = res.json()
                 break
             except Exception as exc:  # noqa: BLE001 - retry any transient proxy failure
+                if _is_quota_error(exc):
+                    raise QuotaExceededError("Gemini quota exhausted (proxy)") from exc
                 last_exc = exc
                 if attempt < self.retries - 1:
                     backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
@@ -135,7 +155,8 @@ class GeminiProxyProvider:
                     await asyncio.sleep(backoff)
         else:
             raise RuntimeError(
-                f"Gemini proxy request failed after {self.retries} attempts: {_redact(str(last_exc), self.token)}"
+                f"Gemini proxy request failed after {self.retries} attempts: "
+                f"{_redact(str(last_exc), self.token)} body={last_body[:300]!r}"
             ) from last_exc
         text = (data.get("text") or "").strip() if isinstance(data, dict) else ""
         if not text:
@@ -203,6 +224,12 @@ class ModelRouter:
         try:
             text = await provider.complete(prompt)
             return text, provider.name
+        except QuotaExceededError:
+            logger.warning(
+                "Model route %s: upstream free-tier quota exhausted; using simulated output "
+                "until the quota resets or the key is upgraded",
+                provider.name,
+            )
         except Exception as exc:
             redacted = _redact(str(exc), self.settings.google_ai_studio_key)
             redacted = _redact(redacted, self.settings.google_ai_studio_proxy_token)

@@ -8,6 +8,7 @@ from app.services.model_router import (
     GeminiProxyProvider,
     ModelRouter,
     OllamaProvider,
+    QuotaExceededError,
     SimulatedProvider,
 )
 from app.services.project import ProjectService, STAGES
@@ -110,6 +111,42 @@ def test_gemini_proxy_parses_and_sends_auth(monkeypatch):
     )
     provider = GeminiProxyProvider("https://fe.example.com/", "secret-tok")
     assert asyncio.run(provider.complete("do it")) == "proxied text"
+
+
+def test_gemini_quota_fails_fast_without_retry(monkeypatch):
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(
+            429,
+            json={"error": {"status": "RESOURCE_EXHAUSTED", "message": "quota exceeded, limit 20"}},
+        )
+
+    _patch_httpx(monkeypatch, handler)
+    provider = GeminiProvider("dummy-key")
+    try:
+        asyncio.run(provider.complete("hi"))
+        raise AssertionError("expected QuotaExceededError")
+    except QuotaExceededError:
+        pass
+    assert len(calls) == 1, "quota errors must not be retried"
+
+
+def test_router_logs_quota_then_falls_back(monkeypatch, caplog):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            429,
+            json={"error": {"status": "RESOURCE_EXHAUSTED", "message": "quota exceeded"}},
+        )
+
+    _patch_httpx(monkeypatch, handler)
+    router = ModelRouter(_settings(google_ai_studio_key="abc"))
+    with caplog.at_level("WARNING", logger="app.services.model_router"):
+        text, provider = asyncio.run(router.complete("hello"))
+    assert provider == "simulated"
+    assert text.startswith("[offline]")
+    assert "quota" in caplog.text.lower()
 
 
 def test_ollama_parses_response(monkeypatch):
