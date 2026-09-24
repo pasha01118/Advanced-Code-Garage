@@ -1,9 +1,8 @@
-"use client"; // Required for useEffect and useState in Next.js App Router
+"use client";
 
-import { Terminal, Cpu, ShieldCheck, Activity, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Terminal, Cpu, ShieldCheck, Activity, Loader2 } from "lucide-react";
 
-// Define types matching the backend schema
 interface AgentStatus {
   name: string;
   role: string;
@@ -22,44 +21,39 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchSwarm = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const response = await fetch(`${apiUrl}/api/v1/agents/swarm`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.statusText}`);
-        }
-        
-        const data: SwarmResponse = await response.json();
-        setSwarmData(data);
-      } catch (err) {
-        console.error("Error fetching swarm data:", err);
-        setError("Unable to connect to Agent Swarm. Is the backend running?");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchSwarm = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://agc-backend-ix19.onrender.com";
+      const response = await fetch(`${apiUrl}/api/v1/agents/swarm`);
+      
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
+      
+      const data: SwarmResponse = await response.json();
+      setSwarmData(data);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching swarm:", err);
+      setError("Unable to connect to Agent Swarm");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchSwarm();
-    // Optional: Poll every 10 seconds for live updates
-    const interval = setInterval(fetchSwarm, 10000);
+    const interval = setInterval(fetchSwarm, 5000); // Poll every 5s
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) {
+  if (loading && !swarmData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-          <p className="text-sm text-slate-400">Initializing Agent Swarm...</p>
-        </div>
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
       </div>
     );
   }
 
-  if (error) {
+  if (error && !swarmData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-red-400 p-6">
         <div className="bg-slate-900 border border-red-900 rounded-xl p-6 max-w-md text-center">
@@ -72,7 +66,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -85,7 +79,7 @@ export default function Home() {
               <Activity className="w-4 h-4 text-green-500" /> System Online
             </span>
             <span className="px-2 py-1 bg-slate-800 rounded text-xs border border-slate-700">
-              Mode: {swarmData?.system_mode}
+              Mode: {swarmData?.system_mode || "Loading..."}
             </span>
           </div>
         </div>
@@ -94,7 +88,7 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Panel: Agent Swarm Status */}
+        {/* Left Panel: Agent Swarm */}
         <div className="lg:col-span-2 space-y-6">
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -120,7 +114,7 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Terminal Output Mockup (Static for now, will be dynamic later) */}
+          {/* Terminal Output */}
           <section className="bg-black border border-slate-800 rounded-xl p-4 font-mono text-xs h-64 overflow-y-auto shadow-inner">
             <div className="text-slate-500 mb-2"># System Log initialized...</div>
             <div className="text-green-400">[OK] Connected to Supabase Vector DB</div>
@@ -130,14 +124,14 @@ export default function Home() {
           </section>
         </div>
 
-        {/* Right Panel: Controls & Stats */}
+        {/* Right Panel: Security & Actions */}
         <div className="space-y-6">
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-green-500" /> Security Gate
             </h2>
             <div className="text-sm text-slate-400 space-y-2">
-              <p>Zero-Tolerance Audit: <span className="text-green-500 font-mono">{swarmData?.security_gate}</span></p>
+              <p>Zero-Tolerance Audit: <span className="text-green-500 font-mono">{swarmData?.security_gate || "Loading..."}</span></p>
               <p>Secrets Scan: <span className="text-green-500 font-mono">Clean</span></p>
               <p>Branch Protection: <span className="text-blue-500 font-mono">Enforced</span></p>
             </div>
@@ -150,7 +144,6 @@ export default function Home() {
              </button>
           </section>
         </div>
-
       </main>
     </div>
   );
