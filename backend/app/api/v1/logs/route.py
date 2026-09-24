@@ -1,28 +1,37 @@
-from fastapi import APIRouter
-from typing import List, Optional
-from pydantic import BaseModel
+from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
+import asyncio
+import json
 import datetime
+import random
 
 router = APIRouter()
 
-class LogEntry(BaseModel):
-    timestamp: str
-    level: str
-    agent: str
-    message: str
+# Simulated log generator
+async def log_generator():
+    messages = [
+        {"level": "INFO", "agent": "System", "msg": "Agent Swarm initialized."},
+        {"level": "DEBUG", "agent": "Ms. Kulsum", "msg": "Token budget optimized: 85% efficiency."},
+        {"level": "WARN", "agent": "Mr. Sadath", "msg": "High entropy detected in input buffer."},
+        {"level": "OK", "agent": "Git-Sir", "msg": "Repository index synced."},
+    ]
+    
+    while True:
+        msg = random.choice(messages)
+        timestamp = datetime.datetime.utcnow().isoformat()
+        payload = {
+            "timestamp": timestamp,
+            "level": msg["level"],
+            "agent": msg["agent"],
+            "message": msg["msg"]
+        }
+        yield f"data: {json.dumps(payload)}\n\n"
+        await asyncio.sleep(2)  # Send every 2 seconds
 
-# Simulated live logs
-LOG_STREAM: List[LogEntry] = [
-    LogEntry(timestamp=datetime.datetime.utcnow().isoformat(), level="INFO", agent="Git-Sir", message="Awaiting input..."),
-    LogEntry(timestamp=datetime.datetime.utcnow().isoformat(), level="WARN", agent="Ms. Kulsum", message="Token optimization active"),
-    LogEntry(timestamp=datetime.datetime.utcnow().isoformat(), level="OK", agent="System", message="Connected to Supabase Vector DB"),
-]
+@router.get("/stream")
+async def stream_logs(request: Request):
+    return StreamingResponse(log_generator(), media_type="text/event-stream")
 
 @router.get("/")
-async def get_logs():
-    return {"logs": LOG_STREAM}
-
-@router.post("/")
-async def add_log(log_entry: LogEntry):
-    LOG_STREAM.append(log_entry)
-    return {"status": "logged"}
+async def get_latest_logs():
+    return {"logs": [], "note": "Use /stream for real-time"}
