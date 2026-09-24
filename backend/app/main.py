@@ -9,9 +9,11 @@ app = FastAPI(
 )
 
 # CORS Configuration for Frontend
+# Use environment variable for production frontend URL
+frontend_url = os.getenv("FRONTEND_URL", "https://advanced-code-garage.vercel.app")
 origins = [
     "http://localhost:3000",
-    "https://advanced-code-garage.vercel.app", # Update when deployed
+    frontend_url,
 ]
 
 app.add_middleware(
@@ -36,8 +38,9 @@ async def health_check():
 
 # Import Routers
 from app.routers.agents import router as agents_router
+from app.api.v1.logs.route import router as logs_router
+from app.api.v1.projects.route import router as projects_router
 
 app.include_router(agents_router)
-
-from app.api.v1.logs.route import router as logs_router
 app.include_router(logs_router, prefix='/api/v1/logs', tags=['logs'])
+app.include_router(projects_router, prefix='/api/v1/projects', tags=['projects'])

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { Cpu, Mail, Lock, Loader2 } from "lucide-react";
+import { Cpu, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,8 +13,18 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const configErrorMessage = !supabase
+    ? "Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables."
+    : null;
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!supabase) {
+      setError("Supabase client not initialized. Check environment variables.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -28,8 +38,8 @@ export default function LoginPage() {
         if (error) throw error;
         router.push("/");
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -43,6 +53,13 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-white">Advanced Code Garage</h1>
           <p className="text-slate-400 text-sm mt-2">Sign in to access the Agent Swarm</p>
         </div>
+
+        {configErrorMessage && (
+          <div className="mb-4 p-3 bg-amber-900/50 border border-amber-800 text-amber-200 text-sm rounded-lg flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {configErrorMessage}
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-3 bg-red-900/50 border border-red-800 text-red-200 text-sm rounded-lg">

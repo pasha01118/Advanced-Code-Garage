@@ -21,7 +21,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);
-  const [initResult, setInitResult] = useState<any>(null);
+  const [initResult, setInitResult] = useState<{ message?: string; project_id?: string; error?: string } | null>(null);
 
   const fetchSwarm = async () => {
     try {
@@ -59,17 +59,31 @@ export default function Home() {
       
       const result = await response.json();
       setInitResult(result);
-    } catch (err: any) {
-      setInitResult({ error: err.message });
+    } catch (err) {
+      setInitResult({ error: err instanceof Error ? err.message : "Initialization failed" });
     } finally {
       setInitializing(false);
     }
   };
 
   useEffect(() => {
-    fetchSwarm();
-    const interval = setInterval(fetchSwarm, 5000);
-    return () => clearInterval(interval);
+    let mounted = true;
+    
+    const loadSwarm = async () => {
+      if (!mounted) return;
+      await fetchSwarm();
+      
+      if (!mounted) return;
+      const interval = setInterval(async () => {
+        if (mounted) await fetchSwarm();
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    };
+    
+    loadSwarm();
+    
+    return () => { mounted = false; };
   }, []);
 
   if (loading && !swarmData) {

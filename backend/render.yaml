@@ -9,9 +9,9 @@ services:
       - key: PYTHON_VERSION
         value: "3.11"
       - key: SUPABASE_URL
-        sync: false
+        value: "https://sdmvjjvvzbwnccwaeomh.supabase.co"
       - key: SUPABASE_ANON_KEY
-        sync: false
+        value: "ACG_COMMITTED_ANON_KEY_PURGED"
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: SECRET_KEY
@@ -20,3 +20,7 @@ services:
         sync: false
       - key: OLLAMA_BASE_URL
         value: "http://localhost:11434"
+      - key: FRONTEND_URL
+        value: "https://advanced-code-garage.vercel.app"
+      - key: ENVIRONMENT
+        value: "production"
