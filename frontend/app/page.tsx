@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Terminal, Cpu, ShieldCheck, Activity, Loader2 } from "lucide-react";
+import { Terminal, Cpu, ShieldCheck, Activity, Loader2, Play } from "lucide-react";
 
 interface AgentStatus {
   name: string;
@@ -20,10 +20,11 @@ export default function Home() {
   const [swarmData, setSwarmData] = useState<SwarmResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(false);
+  const [initResult, setInitResult] = useState<any>(null);
 
   const fetchSwarm = async () => {
     try {
-      // Fallback directly to Render URL if env var is missing during build
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://agc-backend-ix19.onrender.com";
       const response = await fetch(`${apiUrl}/api/v1/agents/swarm`);
       
@@ -37,6 +38,31 @@ export default function Home() {
       setError("Unable to connect to Agent Swarm");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleInitializeProject = async () => {
+    setInitializing(true);
+    setInitResult(null);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://agc-backend-ix19.onrender.com";
+      const response = await fetch(`${apiUrl}/api/v1/projects/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "New Project",
+          description: "Auto-initialized from dashboard"
+        })
+      });
+      
+      if (!response.ok) throw new Error("Failed to initialize project");
+      
+      const result = await response.json();
+      setInitResult(result);
+    } catch (err: any) {
+      setInitResult({ error: err.message });
+    } finally {
+      setInitializing(false);
     }
   };
 
@@ -68,6 +94,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+      {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -85,7 +112,10 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Panel: Agent Swarm */}
         <div className="lg:col-span-2 space-y-6">
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -111,15 +141,23 @@ export default function Home() {
             </div>
           </section>
 
+          {/* Terminal Output */}
           <section className="bg-black border border-slate-800 rounded-xl p-4 font-mono text-xs h-64 overflow-y-auto shadow-inner">
             <div className="text-slate-500 mb-2"># System Log initialized...</div>
             <div className="text-green-400">[OK] Connected to Supabase Vector DB</div>
             <div className="text-blue-400">[INFO] Git-Sir awaiting input...</div>
             <div className="text-yellow-400">[WARN] Token optimization active (Ms. Kulsum)</div>
+            {initResult && !initResult.error && (
+              <div className="text-green-400 mt-2">[SUCCESS] {initResult.message}</div>
+            )}
+            {initResult?.error && (
+              <div className="text-red-400 mt-2">[ERROR] {initResult.error}</div>
+            )}
             <div className="text-slate-400 animate-pulse mt-2">_</div>
           </section>
         </div>
 
+        {/* Right Panel: Security & Actions */}
         <div className="space-y-6">
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -134,9 +172,28 @@ export default function Home() {
           
           <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
              <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-             <button className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition shadow-lg shadow-blue-900/20">
-               Initialize New Project
+             <button 
+               onClick={handleInitializeProject}
+               disabled={initializing}
+               className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+             >
+               {initializing ? (
+                 <>
+                   <Loader2 className="w-4 h-4 animate-spin" />
+                   Initializing...
+                 </>
+               ) : (
+                 <>
+                   <Play className="w-4 h-4" />
+                   Initialize New Project
+                 </>
+               )}
              </button>
+             {initResult && !initResult.error && (
+               <div className="mt-3 p-2 bg-green-900/30 border border-green-800 rounded text-xs text-green-300">
+                 Project ID: {initResult.project_id}
+               </div>
+             )}
           </section>
         </div>
       </main>
