@@ -3,15 +3,12 @@
 import { useState } from "react";
 import { FolderGit2, Plus, Loader2, RefreshCw, GitBranch, CheckCircle2, AlertTriangle } from "lucide-react";
 import { initializeProject, getProjectStatus } from "@/lib/api";
-import type { ProjectInitResponse, ProjectStatus } from "@/lib/types";
+import type { ProjectOut, ProjectStatus } from "@/lib/types";
 
 interface TrackedProject {
-  project_id: string;
+  id: string;
   name: string;
   description?: string;
-  status: string;
-  message: string;
-  agents_assigned: string[];
   statusInfo?: ProjectStatus;
   statusError?: boolean;
 }
@@ -31,12 +28,15 @@ export default function ProjectsPage() {
     setCreating(true);
     setError(null);
     try {
-      const result: ProjectInitResponse = await initializeProject({
+      const result: ProjectOut = await initializeProject({
         name: name.trim(),
         description: description.trim() || undefined,
         repo_url: repoUrl.trim() || undefined,
       });
-      setProjects((prev) => [{ ...result, description: description.trim() || undefined }, ...prev]);
+      setProjects((prev) => [
+        { id: result.id, name: result.name, description: description.trim() || undefined, statusInfo: result },
+        ...prev,
+      ]);
       setName("");
       setDescription("");
       setRepoUrl("");
@@ -52,11 +52,11 @@ export default function ProjectsPage() {
     try {
       const status = await getProjectStatus(projectId);
       setProjects((prev) =>
-        prev.map((p) => (p.project_id === projectId ? { ...p, statusInfo: status, statusError: false } : p))
+        prev.map((p) => (p.id === projectId ? { ...p, statusInfo: status, statusError: false } : p))
       );
     } catch {
       setProjects((prev) =>
-        prev.map((p) => (p.project_id === projectId ? { ...p, statusError: true } : p))
+        prev.map((p) => (p.id === projectId ? { ...p, statusError: true } : p))
       );
     } finally {
       setCheckingId(null);
@@ -145,21 +145,21 @@ export default function ProjectsPage() {
             </div>
           ) : (
             projects.map((project) => (
-              <div key={project.project_id} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <div key={project.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="font-semibold text-slate-200 truncate">{project.name}</div>
-                    <div className="text-xs font-mono text-slate-500 mt-0.5">{project.project_id}</div>
+                    <div className="text-xs font-mono text-slate-500 mt-0.5">{project.id}</div>
                     {project.description && (
                       <div className="text-sm text-slate-400 mt-1">{project.description}</div>
                     )}
                   </div>
                   <button
-                    onClick={() => handleCheck(project.project_id)}
-                    disabled={checkingId === project.project_id}
+                    onClick={() => handleCheck(project.id)}
+                    disabled={checkingId === project.id}
                     className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-slate-300 transition-colors disabled:opacity-60"
                   >
-                    {checkingId === project.project_id ? (
+                    {checkingId === project.id ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <RefreshCw className="w-3.5 h-3.5" />
@@ -171,16 +171,15 @@ export default function ProjectsPage() {
                 <div className="text-xs mt-3 text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                    {project.status}
+                    {project.statusInfo?.status ?? "queued"}
                   </span>
-                  <span>Assigned: {project.agents_assigned.join(", ")}</span>
                 </div>
 
                 {project.statusInfo && (
                   <div className="mt-4">
                     <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
                       <span className="flex items-center gap-1.5">
-                        {project.statusInfo.current_agent} — {project.statusInfo.task}
+                        {project.statusInfo.current_agent} — {project.statusInfo.current_task}
                       </span>
                       <span className="font-mono">{project.statusInfo.progress}%</span>
                     </div>

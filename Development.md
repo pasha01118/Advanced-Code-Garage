@@ -30,14 +30,14 @@ Git-history secret scrub runs LAST.
       PROOF: mode survives a redeploy (kill-switch persistence)
 
 ## Phase 2 — Contract-First
-- [ ] Dump FastAPI openapi.json -> backend/openapi.yaml (committed)
-- [ ] Frontend: add openapi-typescript + orval; gen:api script -> typed client
-- [ ] Retire hand-duplicated lib/types.ts in favor of generated types
+- [x] Dump FastAPI openapi.json -> backend/openapi.json (committed)
+- [x] Frontend: openapi-typescript v7 + gen:api script -> typed client (lib/generated/api.ts)
+- [x] Retire hand-duplicated lib/types.ts (now re-exports generated types; LogEntry kept for SSE)
 - [ ] GATED — pnpm workspaces (apps/frontend, apps/backend, packages/contract).
       Moves Vercel rootDirectory + Render build paths. PAUSE and confirm before doing.
 
 ## Phase 3 — CI + Secret Scrub
-- [ ] Add .github/workflows/ci.yml: backend pytest; frontend eslint + tsc --noEmit
+- [x] Add .github/workflows/ci.yml: backend pytest; frontend eslint + tsc --noEmit + build
 - [ ] Rotate Supabase anon key (Management API / dashboard regenerate)
 - [ ] Remove hardcoded JWT from render.yaml (secrets -> sync:false, dashboard-managed)
 - [ ] Update backend/.env, frontend/.env.local, Vercel + Render env vars with rotated key

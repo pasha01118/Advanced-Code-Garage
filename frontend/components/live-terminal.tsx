@@ -123,7 +123,7 @@ export default function LiveTerminal() {
           logs.map((log, i) => (
             <div key={i} className="flex items-start gap-3">
               <span className="text-slate-600 shrink-0">
-                {new Date(log.timestamp).toLocaleTimeString()}
+                {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : ""}
               </span>
               <span
                 className={`shrink-0 w-14 text-left ${levelClass(log.level)}`}

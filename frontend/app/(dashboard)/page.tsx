@@ -48,7 +48,7 @@ function AgentCard({
   name: string;
   role: string;
   status: string;
-  currentTask: string | null;
+  currentTask: string | null | undefined;
 }) {
   return (
     <div className="flex items-start gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800/50 hover:border-slate-700 transition-colors">
