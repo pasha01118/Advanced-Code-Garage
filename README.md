@@ -286,29 +286,49 @@
 
 ```text
 advanced-code-garage/
-├── sql/
-│   └── schema.sql              # Supabase PostgreSQL DDL, pgvector indexes, RLS rules
-├── app/
-│   ├── main.py                 # FastAPI core kernel, WebSockets, & terminal streaming
-│   ├── orchestration_kernel.py # Finite state machine event bus managing agent handoffs
-│   ├── model_router.py         # Hardware scanner probing RAM/VRAM for model selection
-│   ├── sentinel_healer.py      # Regex stack trace parser & self-healing patch loop
-│   ├── ast_transformer.py      # Abstract syntax tree transformer adding async try/catch
-│   ├── context_compressor.py   # Ms. Kulsum's AST comment stripper & token optimizer
-│   ├── security_vault.py       # AES-256-GCM vault & regulatory policy evaluation engine
-│   ├── sandbox_runner.py       # Ephemeral micro-sandbox chroot process wrapper
-│   ├── git_webhooks.py         # Multi-provider HMAC-SHA256 git webhook dispatcher
-│   ├── voice_engine.py         # WebRTC bidirectional audio gateway for Git-Sir HUD
-│   ├── telemetry.py            # Prometheus OpenMetrics exposition endpoint
-│   └── deployment_drivers.py   # Multi-cloud deployment drivers (Cloudflare, Vercel, Docker)
-├── src/
-│   ├── App.tsx                 # Edge terminal dashboard with Tri-Mode toggles & status
-│   └── components/
-│       ├── AgentPlayground.tsx # Real-time agent chat matrix & split-pane code diff viewer
-│       └── CreateAgentModal.tsx# Dynamic agent factory interface
-└── tests/
-    └── test_e2e_verification.py# Pytest suite verifying AST safety, vault, and security gates
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                    # Backend pytest + frontend lint/typecheck/build
+│       └── keep-awake.yml            # Render free-tier keep-alive (every 10 min)
+├── backend/
+│   ├── app/
+│   │   ├── main.py                   # FastAPI entrypoint, CORS
+│   │   ├── core/
+│   │   │   ├── config.py             # pydantic-settings (typed env config)
+│   │   │   ├── supabase.py           # service-role-first Supabase client
+│   │   │   ├── auth.py               # RS256 JWT verification (Supabase JWKS)
+│   │   │   └── event_bus.py          # in-process async pub/sub for SSE
+│   │   ├── repositories/             # Supabase data access (projects/modes/audit/logs)
+│   │   ├── services/                 # mode, project (pipeline), audit services
+│   │   ├── routers/                  # /api/v1/agents (swarm + mode)
+│   │   └── api/v1/                   # /api/v1/projects, /api/v1/logs (SSE stream)
+│   ├── schemas/                      # Pydantic response/request models
+│   ├── sql/0001_init.sql             # Tables + RLS policies (idempotent migrations)
+│   ├── scripts/apply_migrations.py   # psycopg migration runner
+│   ├── tests/                        # pytest + TestClient with in-memory fakes
+│   ├── render.yaml                   # Render blueprint (secrets dashboard-managed)
+│   └── requirements.txt
+├── frontend/
+│   ├── app/                          # Next.js App Router (dashboard, terminal, projects, admin, login)
+│   ├── components/                   # LiveTerminal etc.
+│   ├── lib/
+│   │   ├── api.ts                    # typed API client (same-origin /api rewrite)
+│   │   ├── generated/api.ts          # openapi-typescript from backend/openapi.json
+│   │   ├── supabaseClient.ts         # Supabase client (publishable key)
+│   │   └── hooks                     # use-live-swarm, use-auth-session
+│   ├── vercel.json                   # /api/* → Render rewrite
+│   └── package.json
+├── openapi.json                      # Live FastAPI contract (source of truth)
+├── Development.md                    # Phased execution plan (this refactor)
+├── Development_Roadmap.md            # Feature roadmap by phase
+└── README.md
 ```
+
+> **Note:** `orchestration_kernel.py`, `model_router.py`, `sentinel_healer.py`,
+> `security_vault.py`, sandboxing, voice, and webhook modules are future work —
+> the current backend provides the real persistence, auth, mode routing, project
+> pipeline, and SSE log stream that the UI consumes. The 12-agent roster shown in
+> the UI is the current Phase 4 target.
 
 ---
 

@@ -3,10 +3,11 @@
 *Note: This roadmap is structured by logical dependency and feature completion. No time, day, date, or week markers are assigned.*
 
 ## Phase 1: Core Infrastructure & Foundation
-- [ ] Initialize repository structure (FastAPI backend, Next.js/React frontend).
-- [ ] Configure Supabase (PostgreSQL, pgvector for agent memory, Row-Level Security).
-- [ ] Implement secure authentication and the encrypted BYOK (Bring Your Own Key) vault.
-- [ ] Establish baseline `.env` schema and local Docker environment.
+- [x] Initialize repository structure (FastAPI backend, Next.js/React frontend).
+- [x] Configure Supabase (PostgreSQL, RLS) — NOTE: pgvector embeddings not yet provisioned.
+- [x] Implement secure authentication (Supabase client auth; backend RS256 JWT verification).
+- [ ] Implement the encrypted BYOK (Bring Your Own Key) vault.
+- [ ] Establish baseline Docker environment.
 
 ## Phase 2: AI Orchestration & Routing Engine
 - [ ] Build `model_router.py`: Hardware-aware inference adapter (Ollama/Cloud).
@@ -30,9 +31,9 @@
 - [ ] Develop Telegram/Discord bot gateways.
 
 ## Phase 6: Frontend Dashboard & Admin Control
-- [ ] Build Agent Playground UI and real-time terminal.
-- [ ] Implement 3 Execution Mode toggles (Autonomous, AI-Man, Manual).
-- [ ] Develop Secret Admin Control Panel (RBAC, kill switches).
+- [x] Build Agent Playground UI and real-time terminal (SSE).
+- [x] Implement 3 Execution Mode toggles (Autonomous, AI-Man, Manual) — persisted in Supabase.
+- [x] Develop Secret Admin Control Panel (RBAC, kill switches).
 
 ## Phase 7: Hardening, Resilience & Testing
 - [ ] Implement `offline_cache.py` for WAN resilience.
