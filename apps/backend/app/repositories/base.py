@@ -24,3 +24,13 @@ class SupabaseRepository:
             return fn(*args, **kwargs)
 
         return await asyncio.to_thread(call)
+
+    @staticmethod
+    def _row(res: Any) -> dict | None:
+        """Normalise postgrest results (list or dict) into a single row."""
+        data = getattr(res, "data", None)
+        if isinstance(data, dict):
+            return data if data else None
+        if isinstance(data, list):
+            return data[0] if data else None
+        return None

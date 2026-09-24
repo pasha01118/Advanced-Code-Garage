@@ -8,11 +8,12 @@ DEFAULT_MODE = "AI-Man"
 class ModesRepository(SupabaseRepository):
     async def get(self) -> str:
         res = await self._run(
-            self.db.table("execution_modes").select("value").eq("key", "system").maybe_single().execute
+            self.db.table("execution_modes").select("value").eq("key", "system").limit(1).execute
         )
-        if not res.data:
+        row = self._row(res)
+        if not row:
             return DEFAULT_MODE
-        return res.data.get("value", DEFAULT_MODE)
+        return row.get("value", DEFAULT_MODE)
 
     async def set(self, value: str) -> str:
         now = datetime.now(timezone.utc).isoformat()
@@ -20,9 +21,9 @@ class ModesRepository(SupabaseRepository):
             self.db.table("execution_modes")
             .update({"value": value, "updated_at": now})
             .eq("key", "system")
-            .maybe_single()
             .execute
         )
-        if not res.data:
+        row = self._row(res)
+        if not row:
             return value
-        return res.data.get("value", value)
+        return row.get("value", value)

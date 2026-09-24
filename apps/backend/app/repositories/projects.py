@@ -16,15 +16,15 @@ class ProjectsRepository(SupabaseRepository):
 
     async def get(self, project_id: str) -> dict | None:
         res = await self._run(
-            self.db.table("projects").select("*").eq("id", project_id).maybe_single().execute
+            self.db.table("projects").select("*").eq("id", project_id).limit(1).execute
         )
-        return res.data
+        return self._row(res)
 
     async def update(self, project_id: str, **fields) -> dict | None:
         res = await self._run(
-            self.db.table("projects").update(fields).eq("id", project_id).maybe_single().execute
+            self.db.table("projects").update(fields).eq("id", project_id).execute
         )
-        return res.data
+        return self._row(res)
 
     async def list_recent(self, limit: int = 50) -> list[dict]:
         res = await self._run(
