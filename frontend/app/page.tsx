@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Terminal, Cpu, ShieldCheck, Activity, Loader2, Play } from "lucide-react";
 
 interface AgentStatus {
@@ -22,11 +22,18 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);
   const [initResult, setInitResult] = useState<{ message?: string; project_id?: string; error?: string } | null>(null);
+  const inFlightRef = useRef(false);
 
   const fetchSwarm = async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://agc-backend-ix19.onrender.com";
-      const response = await fetch(`${apiUrl}/api/v1/agents/swarm`);
+      const response = await fetch(`${apiUrl}/api/v1/agents/swarm`, { signal: controller.signal });
       
       if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
       
@@ -35,8 +42,10 @@ export default function Home() {
       setError(null);
     } catch (err) {
       console.error("Error fetching swarm:", err);
-      setError("Unable to connect to Agent Swarm");
+      setError("Unable to connect to Agent Swarm. Retrying...");
     } finally {
+      clearTimeout(timeout);
+      inFlightRef.current = false;
       setLoading(false);
     }
   };
@@ -68,22 +77,18 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true;
-    
-    const loadSwarm = async () => {
-      if (!mounted) return;
-      await fetchSwarm();
-      
-      if (!mounted) return;
-      const interval = setInterval(async () => {
-        if (mounted) await fetchSwarm();
-      }, 5000);
-      
-      return () => clearInterval(interval);
+
+    const run = async () => {
+      if (mounted) await fetchSwarm();
     };
-    
-    loadSwarm();
-    
-    return () => { mounted = false; };
+
+    run();
+    const interval = setInterval(run, 5000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading && !swarmData) {
@@ -100,7 +105,11 @@ export default function Home() {
         <div className="bg-slate-900 border border-red-900 rounded-xl p-6 max-w-md text-center">
           <ShieldCheck className="w-12 h-12 mx-auto mb-4 text-red-500" />
           <h2 className="text-xl font-bold mb-2">Connection Error</h2>
-          <p>{error}</p>
+          <p className="text-sm">{error}</p>
+          <div className="mt-4 flex items-center justify-center gap-2 text-blue-400 text-xs">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Auto-reconnecting to Agent Swarm...
+          </div>
         </div>
       </div>
     );
