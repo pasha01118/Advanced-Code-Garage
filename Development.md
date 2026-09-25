@@ -52,3 +52,25 @@ Git-history secret scrub runs LAST.
 - [x] Update README.md architecture + Development_Roadmap.md checkboxes to match reality
 - [x] Update README repository tree to pnpm monorepo layout (apps/ + packages/)
 - [ ] Final summary: commit log + what changed + remaining follow-ups
+
+## Phase 5 — Admin Panel & Self-Healing Sentinel
+- [x] Migration `sql/0003_admin.sql`: `app_state` (single running/maintenance/shutdown row + 7
+      feature toggles), `admin_sentinel_events` + `admin_sentinel_discussion` (RLS service-role),
+      `admin_user_ids`, `admin_provider_metrics`; applied to Supabase
+- [x] Core config additions: `admin_reset_token`, `sentinel_interval_seconds`,
+      `require_admin` dependency (app_metadata.role == "admin" OR sub in admin_user_ids OR service role)
+- [x] `app/services/ops_state.py`: cached state service + `require_service(feature)` gating dependency;
+      execution endpoints (/agents/swarm, /agents/mode, /projects POST) return 503 when a feature is disabled
+- [x] `app/services/sentinel.py`: SentinelService.run_cycle — provider health scan
+      (aggregate_providers + catalog), error-log scan (agent_logs), auto-heal (flush_cache),
+      AI-engineer discussion personas; background loop via FastAPI lifespan
+- [x] `app/services/admin_users.py`: Supabase Admin API client (list, set identity/email, ban/unban)
+- [x] `app/api/v1/admin/route.py`: /state (GET any-authed, POST admin), /toggles/{name},
+      /providers/usage, /sentinel/events + /discussion + /snapshot + /run + /stream (SSE),
+      /users, /users/{id}/suspend + /reactivate, /account; mounted at /api/v1/admin
+- [x] `POST /api/v1/auth/admin/forgot-password`: token-based (ADMIN_RESET_TOKEN) admin password reset
+- [x] Backend tests: test_admin (13) + test_sentinel (7) + auth bootstrap; full suite 68 passing
+- [x] Contract regen: openapi.json rewritten + gen:api regenerated
+- [x] Frontend: tabbed /admin dashboard (Overview / Providers / Sentinel / Users / Account),
+      SystemBanner maintenance/shutdown banner, RBAC nav enforcement, admin API client + types
+- [x] Verify: backend pytest 68 pass, frontend lint/typecheck/build clean, health + /admin/state live

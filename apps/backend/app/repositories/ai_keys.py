@@ -93,3 +93,29 @@ class AIKeysRepository(SupabaseRepository):
         )
         rows = res.data or []
         return bool(rows)
+
+    async def aggregate_providers(self) -> list[dict]:
+        """Per-provider health across all users (for the Sentinel scan)."""
+        res = await self._run(
+            self.db.table(TABLENAME).select("provider,status,message,model_count").execute
+        )
+        aggregated: dict[str, dict] = {}
+        for row in res.data or []:
+            provider = row.get("provider")
+            status = row.get("status", "untested")
+            entry = aggregated.setdefault(
+                provider,
+                {"provider": provider, "configured": 0, "active": 0, "error": 0, "quota": 0,
+                 "models": 0, "messages": []},
+            )
+            entry["configured"] += 1
+            entry["models"] += row.get("model_count", 0) or 0
+            if status == "active":
+                entry["active"] += 1
+            elif status == "error":
+                entry["error"] += 1
+            elif status == "quota":
+                entry["quota"] += 1
+            if row.get("message"):
+                entry["messages"].append(row.get("message"))
+        return sorted(aggregated.values(), key=lambda e: e["provider"])

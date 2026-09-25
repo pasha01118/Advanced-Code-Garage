@@ -245,6 +245,266 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bootstrap Admin
+         * @description First-run Admin Sign-Up.
+         *
+         *     Creates the platform admin directly (no confirmation email needed) and
+         *     marks it with ``app_metadata.role == "admin"``. Only allowed while no
+         *     admin exists yet; afterward sign-up must go through a future
+         *     server-integrated (email-confirmed) flow.
+         */
+        post: operations["bootstrap_admin_api_v1_auth_bootstrap_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/admin/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Forgot Password
+         * @description No-email admin password reset.
+         *
+         *     Unlocks only when ADMIN_RESET_TOKEN is configured; the admin supplies the
+         *     reset token plus a new password (optionally targeting a specific account
+         *     by email — defaults to the single admin account).
+         */
+        post: operations["admin_forgot_password_api_v1_auth_admin_forgot_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get State
+         * @description Operational state visible to any signed-in user (powers the banner).
+         */
+        get: operations["get_state_api_v1_admin_state_get"];
+        put?: never;
+        /** Set State */
+        post: operations["set_state_api_v1_admin_state_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/toggles/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Toggle */
+        post: operations["set_toggle_api_v1_admin_toggles__name__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/providers/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Provider Usage */
+        get: operations["provider_usage_api_v1_admin_providers_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sentinel/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sentinel Events */
+        get: operations["sentinel_events_api_v1_admin_sentinel_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sentinel/discussion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sentinel Discussion */
+        get: operations["sentinel_discussion_api_v1_admin_sentinel_discussion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sentinel/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sentinel Snapshot */
+        get: operations["sentinel_snapshot_api_v1_admin_sentinel_snapshot_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sentinel/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Sentinel */
+        post: operations["run_sentinel_api_v1_admin_sentinel_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sentinel/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sentinel Stream */
+        get: operations["sentinel_stream_api_v1_admin_sentinel_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Users */
+        get: operations["list_users_api_v1_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend User */
+        post: operations["suspend_user_api_v1_admin_users__user_id__suspend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate User */
+        post: operations["reactivate_user_api_v1_admin_users__user_id__reactivate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Account
+         * @description Change the signed-in admin's login email and/or password.
+         */
+        post: operations["update_account_api_v1_admin_account_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -351,6 +611,55 @@ export interface components {
              */
             models: components["schemas"]["AIModelInfo"][];
         };
+        /** AdminBootstrapOut */
+        AdminBootstrapOut: {
+            /** User Id */
+            user_id: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Role */
+            role: string;
+            /** Message */
+            message: string;
+        };
+        /** AdminBootstrapRequest */
+        AdminBootstrapRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+            /** Name */
+            name?: string | null;
+            /** Bootstrap Token */
+            bootstrap_token?: string | null;
+        };
+        /** AdminForgotPasswordOut */
+        AdminForgotPasswordOut: {
+            /** User Id */
+            user_id: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Message */
+            message: string;
+        };
+        /** AdminForgotPasswordRequest */
+        AdminForgotPasswordRequest: {
+            /** Reset Token */
+            reset_token: string;
+            /** New Password */
+            new_password: string;
+            /** Email */
+            email?: string | null;
+        };
         /** AgentStatus */
         AgentStatus: {
             /** Name */
@@ -377,6 +686,23 @@ export interface components {
              */
             security_gate: string;
         };
+        /** AppStateOut */
+        AppStateOut: {
+            status: components["schemas"]["AppStatus"];
+            /** Message */
+            message: string;
+            /** Toggles */
+            toggles: {
+                [key: string]: boolean;
+            };
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
+         * AppStatus
+         * @enum {string}
+         */
+        AppStatus: "running" | "maintenance" | "shutdown";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -460,6 +786,182 @@ export interface components {
              * @default []
              */
             providers: components["schemas"]["ProviderCatalogEntry"][];
+        };
+        /** ProviderUsageListOut */
+        ProviderUsageListOut: {
+            /** Providers */
+            providers: components["schemas"]["ProviderUsageOut"][];
+        };
+        /** ProviderUsageOut */
+        ProviderUsageOut: {
+            /** Provider */
+            provider: string;
+            /** Status */
+            status: string;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+            /**
+             * Model Count
+             * @default 0
+             */
+            model_count: number;
+            /**
+             * Tokens Used
+             * @default 0
+             */
+            tokens_used: number;
+            /** Balance Available */
+            balance_available?: number | null;
+            /** Checked At */
+            checked_at?: string | null;
+            /**
+             * Suggestion
+             * @default
+             */
+            suggestion: string;
+        };
+        /** RunSentinelOut */
+        RunSentinelOut: {
+            /** Events Added */
+            events_added: number;
+            /** Discussion Added */
+            discussion_added: number;
+        };
+        /** SentinelDiscussionEntryOut */
+        SentinelDiscussionEntryOut: {
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Agent */
+            agent: string;
+            /** Message */
+            message: string;
+        };
+        /** SentinelEventOut */
+        SentinelEventOut: {
+            /** Id */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Severity */
+            severity: string;
+            /** Scope */
+            scope: string;
+            /** Agent */
+            agent: string;
+            /** Title */
+            title: string;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+            /**
+             * Status
+             * @default open
+             */
+            status: string;
+            /**
+             * Suggested Fix
+             * @default
+             */
+            suggested_fix: string;
+            /**
+             * Auto Fix Report
+             * @default
+             */
+            auto_fix_report: string;
+        };
+        /** SentinelSnapshotOut */
+        SentinelSnapshotOut: {
+            /** Running */
+            running: boolean;
+            /** Last Run At */
+            last_run_at?: string | null;
+            /** Interval Seconds */
+            interval_seconds: number;
+            /** Events */
+            events: components["schemas"]["SentinelEventOut"][];
+            /** Discussion */
+            discussion: components["schemas"]["SentinelDiscussionEntryOut"][];
+        };
+        /** SetAppStateRequest */
+        SetAppStateRequest: {
+            status: components["schemas"]["AppStatus"];
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+        };
+        /** SetToggleRequest */
+        SetToggleRequest: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** SuspendUserRequest */
+        SuspendUserRequest: {
+            /**
+             * Duration Minutes
+             * @default 60
+             */
+            duration_minutes: number;
+        };
+        /** UpdateAccountOut */
+        UpdateAccountOut: {
+            /** User Id */
+            user_id?: string | null;
+            /** Email */
+            email: string;
+            /** Message */
+            message: string;
+        };
+        /** UpdateAccountRequest */
+        UpdateAccountRequest: {
+            /** Email */
+            email?: string | null;
+            /** New Password */
+            new_password?: string | null;
+            /** Reset Token */
+            reset_token?: string | null;
+        };
+        /** UserListOut */
+        UserListOut: {
+            /** Users */
+            users: components["schemas"]["UserRowOut"][];
+        };
+        /** UserRowOut */
+        UserRowOut: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Confirmed
+             * @default false
+             */
+            confirmed: boolean;
+            /** Banned Until */
+            banned_until?: string | null;
+            /**
+             * Admin
+             * @default false
+             */
+            admin: boolean;
+            /** Last Sign In At */
+            last_sign_in_at?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -855,6 +1357,403 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AIModelListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bootstrap_admin_api_v1_auth_bootstrap_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminBootstrapRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBootstrapOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_forgot_password_api_v1_auth_admin_forgot_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminForgotPasswordOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_state_api_v1_admin_state_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+        };
+    };
+    set_state_api_v1_admin_state_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAppStateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_toggle_api_v1_admin_toggles__name__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetToggleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    provider_usage_api_v1_admin_providers_usage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderUsageListOut"];
+                };
+            };
+        };
+    };
+    sentinel_events_api_v1_admin_sentinel_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentinelEventOut"][];
+                };
+            };
+        };
+    };
+    sentinel_discussion_api_v1_admin_sentinel_discussion_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentinelDiscussionEntryOut"][];
+                };
+            };
+        };
+    };
+    sentinel_snapshot_api_v1_admin_sentinel_snapshot_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentinelSnapshotOut"];
+                };
+            };
+        };
+    };
+    run_sentinel_api_v1_admin_sentinel_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunSentinelOut"];
+                };
+            };
+        };
+    };
+    sentinel_stream_api_v1_admin_sentinel_stream_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    list_users_api_v1_admin_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListOut"];
+                };
+            };
+        };
+    };
+    suspend_user_api_v1_admin_users__user_id__suspend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuspendUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reactivate_user_api_v1_admin_users__user_id__reactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_account_api_v1_admin_account_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateAccountOut"];
                 };
             };
             /** @description Validation Error */

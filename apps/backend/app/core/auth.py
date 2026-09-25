@@ -64,3 +64,23 @@ async def require_authenticated(user: dict = Depends(require_user)) -> dict:
     if user.get("role") not in {"authenticated", "service_role"}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
     return user
+
+
+ADMIN_ROLE = "admin"
+
+
+def _is_admin(user: dict) -> bool:
+    settings = get_settings()
+    allowlisted = {s.strip() for s in settings.admin_user_ids.split(",") if s.strip()}
+    if user.get("sub") in allowlisted:
+        return True
+    app_metadata = user.get("app_metadata") or {}
+    if app_metadata.get("role") == ADMIN_ROLE:
+        return True
+    return user.get("role") == "service_role"
+
+
+async def require_admin(user: dict = Depends(require_authenticated)) -> dict:
+    if not _is_admin(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
+    return user

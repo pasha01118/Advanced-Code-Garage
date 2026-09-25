@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 from app.core.auth import require_authenticated
 from app.schemas.agent import AgentStatus, AgentSwarmResponse
 from app.services.mode import ModeService
+from app.services.ops_state import require_service
 
 router = APIRouter(prefix="/api/v1/agents", tags=["Agents"])
 
@@ -22,6 +23,7 @@ def get_mode_service() -> ModeService:
 
 AuthenticatedUser = Annotated[dict, Depends(require_authenticated)]
 
+
 ROSTER = [
     AgentStatus(name="Mr. Ravish Kumar", role="Research Lead", status="Analyzing Market...", current_task="Market Mapping"),
     AgentStatus(name="Mr. Arman Ali Khan", role="Full Stack Arch", status="Idle", current_task=None),
@@ -30,14 +32,14 @@ ROSTER = [
 ]
 
 
-@router.get("/swarm", response_model=AgentSwarmResponse)
+@router.get("/swarm", response_model=AgentSwarmResponse, dependencies=[Depends(require_service("swarm"))])
 async def get_agent_swarm(mode_service: ModeService = Depends(get_mode_service)) -> AgentSwarmResponse:
     """Returns the current status of the agent team with the persistent mode."""
     system_mode = await mode_service.get()
     return AgentSwarmResponse(active_agents=ROSTER, system_mode=system_mode)
 
 
-@router.post("/mode")
+@router.post("/mode", dependencies=[Depends(require_service("swarm"))])
 async def set_execution_mode(
     req: ModeUpdateRequest,
     user: AuthenticatedUser,

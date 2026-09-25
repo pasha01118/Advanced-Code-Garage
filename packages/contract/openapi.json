@@ -504,6 +504,556 @@
           }
         }
       }
+    },
+    "/api/v1/auth/bootstrap": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Bootstrap Admin",
+        "description": "First-run Admin Sign-Up.\n\nCreates the platform admin directly (no confirmation email needed) and\nmarks it with ``app_metadata.role == \"admin\"``. Only allowed while no\nadmin exists yet; afterward sign-up must go through a future\nserver-integrated (email-confirmed) flow.",
+        "operationId": "bootstrap_admin_api_v1_auth_bootstrap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminBootstrapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBootstrapOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/admin/forgot-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Admin Forgot Password",
+        "description": "No-email admin password reset.\n\nUnlocks only when ADMIN_RESET_TOKEN is configured; the admin supplies the\nreset token plus a new password (optionally targeting a specific account\nby email \u2014 defaults to the single admin account).",
+        "operationId": "admin_forgot_password_api_v1_auth_admin_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminForgotPasswordOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/state": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get State",
+        "description": "Operational state visible to any signed-in user (powers the banner).",
+        "operationId": "get_state_api_v1_admin_state_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set State",
+        "operationId": "set_state_api_v1_admin_state_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAppStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/toggles/{name}": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set Toggle",
+        "operationId": "set_toggle_api_v1_admin_toggles__name__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetToggleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/providers/usage": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Provider Usage",
+        "operationId": "provider_usage_api_v1_admin_providers_usage_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsageListOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/sentinel/events": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sentinel Events",
+        "operationId": "sentinel_events_api_v1_admin_sentinel_events_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SentinelEventOut"
+                  },
+                  "type": "array",
+                  "title": "Response Sentinel Events Api V1 Admin Sentinel Events Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/sentinel/discussion": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sentinel Discussion",
+        "operationId": "sentinel_discussion_api_v1_admin_sentinel_discussion_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SentinelDiscussionEntryOut"
+                  },
+                  "type": "array",
+                  "title": "Response Sentinel Discussion Api V1 Admin Sentinel Discussion Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/sentinel/snapshot": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sentinel Snapshot",
+        "operationId": "sentinel_snapshot_api_v1_admin_sentinel_snapshot_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentinelSnapshotOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/sentinel/run": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Run Sentinel",
+        "operationId": "run_sentinel_api_v1_admin_sentinel_run_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunSentinelOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/sentinel/stream": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sentinel Stream",
+        "operationId": "sentinel_stream_api_v1_admin_sentinel_stream_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Users",
+        "operationId": "list_users_api_v1_admin_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/suspend": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Suspend User",
+        "operationId": "suspend_user_api_v1_admin_users__user_id__suspend_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Suspend User Api V1 Admin Users  User Id  Suspend Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{user_id}/reactivate": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reactivate User",
+        "operationId": "reactivate_user_api_v1_admin_users__user_id__reactivate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reactivate User Api V1 Admin Users  User Id  Reactivate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/account": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Account",
+        "description": "Change the signed-in admin's login email and/or password.",
+        "operationId": "update_account_api_v1_admin_account_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateAccountOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -731,6 +1281,138 @@
         ],
         "title": "AIValidateOut"
       },
+      "AdminBootstrapOut": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "email",
+          "role",
+          "message"
+        ],
+        "title": "AdminBootstrapOut"
+      },
+      "AdminBootstrapRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "bootstrap_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bootstrap Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "AdminBootstrapRequest"
+      },
+      "AdminForgotPasswordOut": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "email",
+          "message"
+        ],
+        "title": "AdminForgotPasswordOut"
+      },
+      "AdminForgotPasswordRequest": {
+        "properties": {
+          "reset_token": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reset Token"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reset_token",
+          "new_password"
+        ],
+        "title": "AdminForgotPasswordRequest"
+      },
       "AgentStatus": {
         "properties": {
           "name": {
@@ -791,6 +1473,52 @@
           "active_agents"
         ],
         "title": "AgentSwarmResponse"
+      },
+      "AppStateOut": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/AppStatus"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "toggles": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Toggles"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "toggles"
+        ],
+        "title": "AppStateOut"
+      },
+      "AppStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "maintenance",
+          "shutdown"
+        ],
+        "title": "AppStatus"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1018,6 +1746,430 @@
         },
         "type": "object",
         "title": "ProviderCatalogListOut"
+      },
+      "ProviderUsageListOut": {
+        "properties": {
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageOut"
+            },
+            "type": "array",
+            "title": "Providers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "providers"
+        ],
+        "title": "ProviderUsageListOut"
+      },
+      "ProviderUsageOut": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          },
+          "model_count": {
+            "type": "integer",
+            "title": "Model Count",
+            "default": 0
+          },
+          "tokens_used": {
+            "type": "integer",
+            "title": "Tokens Used",
+            "default": 0
+          },
+          "balance_available": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Available"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "suggestion": {
+            "type": "string",
+            "title": "Suggestion",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "status"
+        ],
+        "title": "ProviderUsageOut"
+      },
+      "RunSentinelOut": {
+        "properties": {
+          "events_added": {
+            "type": "integer",
+            "title": "Events Added"
+          },
+          "discussion_added": {
+            "type": "integer",
+            "title": "Discussion Added"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events_added",
+          "discussion_added"
+        ],
+        "title": "RunSentinelOut"
+      },
+      "SentinelDiscussionEntryOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "agent": {
+            "type": "string",
+            "title": "Agent"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "agent",
+          "message"
+        ],
+        "title": "SentinelDiscussionEntryOut"
+      },
+      "SentinelEventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "agent": {
+            "type": "string",
+            "title": "Agent"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "open"
+          },
+          "suggested_fix": {
+            "type": "string",
+            "title": "Suggested Fix",
+            "default": ""
+          },
+          "auto_fix_report": {
+            "type": "string",
+            "title": "Auto Fix Report",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "severity",
+          "scope",
+          "agent",
+          "title"
+        ],
+        "title": "SentinelEventOut"
+      },
+      "SentinelSnapshotOut": {
+        "properties": {
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "interval_seconds": {
+            "type": "integer",
+            "title": "Interval Seconds"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/SentinelEventOut"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "discussion": {
+            "items": {
+              "$ref": "#/components/schemas/SentinelDiscussionEntryOut"
+            },
+            "type": "array",
+            "title": "Discussion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "running",
+          "interval_seconds",
+          "events",
+          "discussion"
+        ],
+        "title": "SentinelSnapshotOut"
+      },
+      "SetAppStateRequest": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/AppStatus"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Message",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "SetAppStateRequest"
+      },
+      "SetToggleRequest": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "SetToggleRequest"
+      },
+      "SuspendUserRequest": {
+        "properties": {
+          "duration_minutes": {
+            "type": "integer",
+            "maximum": 525600.0,
+            "minimum": 1.0,
+            "title": "Duration Minutes",
+            "default": 60
+          }
+        },
+        "type": "object",
+        "title": "SuspendUserRequest"
+      },
+      "UpdateAccountOut": {
+        "properties": {
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "message"
+        ],
+        "title": "UpdateAccountOut"
+      },
+      "UpdateAccountRequest": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "new_password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Password"
+          },
+          "reset_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset Token"
+          }
+        },
+        "type": "object",
+        "title": "UpdateAccountRequest"
+      },
+      "UserListOut": {
+        "properties": {
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/UserRowOut"
+            },
+            "type": "array",
+            "title": "Users"
+          }
+        },
+        "type": "object",
+        "required": [
+          "users"
+        ],
+        "title": "UserListOut"
+      },
+      "UserRowOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed",
+            "default": false
+          },
+          "banned_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banned Until"
+          },
+          "admin": {
+            "type": "boolean",
+            "title": "Admin",
+            "default": false
+          },
+          "last_sign_in_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sign In At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "UserRowOut"
       },
       "ValidationError": {
         "properties": {

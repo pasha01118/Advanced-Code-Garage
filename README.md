@@ -293,27 +293,29 @@ advanced-code-garage/
 ├── apps/
 │   ├── backend/
 │   │   ├── app/
-│   │   │   ├── main.py               # FastAPI entrypoint, CORS
+│   │   │   ├── main.py               # FastAPI entrypoint, CORS, lifespan sentinel loop
 │   │   │   ├── core/
 │   │   │   │   ├── config.py         # pydantic-settings (typed env config)
 │   │   │   │   ├── supabase.py       # service-role-first Supabase client
-│   │   │   │   ├── auth.py           # ES256/RS256 JWT verification (Supabase JWKS)
+│   │   │   │   ├── auth.py           # ES256/RS256 JWT + require_admin/require_service deps
 │   │   │   │   ├── crypto.py         # Fernet encrypt/decrypt for user provider keys
 │   │   │   │   └── event_bus.py      # in-process async pub/sub for SSE
-│   │   │   ├── repositories/         # Supabase data access (projects/modes/audit/logs/ai_keys)
-│   │   │   ├── services/             # mode, project (pipeline), audit, model_router, ai_integration, ai_catalog
+│   │   │   ├── repositories/         # Supabase data access (projects/modes/audit/logs/ai_keys/admin)
+│   │   │   ├── services/             # mode, project (pipeline), audit, model_router, ai_integration,
+│   │   │   │                         # ai_catalog, ops_state, sentinel, admin_users, auth_bootstrap
 │   │   │   ├── routers/              # /api/v1/agents (swarm + mode)
-│   │   │   └── api/v1/               # /api/v1/projects, /api/v1/logs (SSE), /api/v1/ai (catalog/keys/models)
-│   │   ├── schemas/                  # Pydantic response/request models
+│   │   │   └── api/v1/               # /api/v1/projects, /api/v1/logs (SSE), /api/v1/ai, /api/v1/admin, /api/v1/auth
+│   │   ├── schemas/                  # Pydantic response/request models (incl. admin + auth)
 │   │   ├── sql/0001_init.sql         # Tables + RLS policies (idempotent migrations)
 │   │   ├── sql/0002_ai_keys.sql      # user_ai_keys (encrypted BYOK vault) + RLS
+│   │   ├── sql/0003_admin.sql        # app_state, sentinel events/discussion, admin_user_ids, provider_metrics + RLS
 │   │   ├── scripts/apply_migrations.py # psycopg migration runner
-│   │   ├── tests/                    # pytest + TestClient with in-memory fakes
+│   │   ├── tests/                    # pytest + TestClient with in-memory fakes (68 passing)
 │   │   ├── render.yaml               # Render blueprint (secrets dashboard-managed)
 │   │   └── requirements.txt
 │   └── frontend/
 │       ├── app/                      # Next.js App Router (dashboard, terminal, projects, ai-integration, admin, login, genai)
-│       ├── components/               # LiveTerminal etc.
+│       ├── components/               # LiveTerminal, SystemBanner, BannerWrapper etc.
 │       ├── lib/                      # api.ts, types.ts (@acg/contract), supabaseClient.ts, hooks
 │       ├── vercel.json               # /api/* → Render rewrite
 │       └── package.json
@@ -330,8 +332,8 @@ advanced-code-garage/
 └── README.md
 ```
 
-> **Note:** `orchestration_kernel.py`, `sentinel_healer.py`, `security_vault.py`,
-> sandboxing, voice, ChatOps, and CI-webhook modules remain future work.
+> `sentinel_healer.py`, sandboxing, voice, ChatOps, and CI-webhook modules remain future work
+> (the Sentinel *monitor* is live; the AST-fix healer on CI webhooks is not).
 > The current backend provides real persistence (Supabase), ES256 auth, mode
 > routing, a real model router (Google Gemini direct or via a first-party Vercel
 > proxy, falling back to Ollama/simulated), the project pipeline, the SSE log
@@ -340,9 +342,14 @@ advanced-code-garage/
 > Ollama, plus Google) whose per-user API keys are Fernet-encrypted at rest
 > (`user_ai_keys`, RLS) and validated on first connect via a cheap models-list
 > call, with live model lists (session-cached) surfaced on the `/ai-integration`
-> dashboard. The free-tier Google key caps Gemini at ~20 requests/day
-> on `gemini-3.6-flash`; when that quota is exhausted the pipeline degrades
-> gracefully to staged simulated output.
+> dashboard. An Admin Panel (`/admin`, admin-only) exposes app state
+> (running/maintenance/shutdown), 7 feature toggles (execution endpoints 503 when
+> disabled), provider usage metrics, Sentinel telemetry (events, AI-engineer
+> discussion, live SSE stream, click-to-run cycle), user management
+> (suspend/reactivate), and admin account settings — plus a global banner when
+> the app is in maintenance. The free-tier Google key caps Gemini at ~20
+> requests/day on `gemini-3.6-flash`; when that quota is exhausted the pipeline
+> degrades gracefully to staged simulated output.
 
 ---
 

@@ -38,8 +38,14 @@
 - [x] Develop Secret Admin Control Panel (RBAC, kill switches).
 - [x] Build AI Integration dashboard (11-provider catalog, connect keys, live model lists,
       LED connectivity status, Ollama modal).
+- [x] Build full Admin Panel: operational state (running/maintenance/shutdown), feature toggles,
+      provider usage metrics, Sentinel telemetry (events/discussion/live SSE), user management
+      (suspend/reactivate), and admin account settings.
+- [x] Add global maintenance/shutdown banner + RBAC nav enforcement for non-admins.
 
 ## Phase 7: Hardening, Resilience & Testing
+- [x] Implement self-healing Sentinel service (provider + error-log scan, auto flush-cache heal,
+      AI-engineer discussion, background loop on FastAPI lifespan).
 - [ ] Implement `offline_cache.py` for WAN resilience.
 - [ ] Execute `test_benchmarks.py` for performance validation.
 - [ ] Conduct end-to-end penetration testing.

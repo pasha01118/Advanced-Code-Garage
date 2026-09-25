@@ -17,13 +17,14 @@ import {
 import { useAuthSession } from "@/lib/use-auth-session";
 import { useLiveSwarm } from "@/lib/use-live-swarm";
 import { supabase } from "@/lib/supabaseClient";
+import { SystemBanner } from "@/components/SystemBanner";
 
 const NAV_ITEMS = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/terminal", label: "Terminal", icon: SquareTerminal },
   { href: "/projects", label: "Projects", icon: FolderGit2 },
   { href: "/ai-integration", label: "AI Integration", icon: Sparkles },
-  { href: "/admin", label: "Control Panel", icon: ShieldCheck },
+  { href: "/admin", label: "Control Panel", icon: ShieldCheck, admin: true },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const redirectedRef = useRef(false);
+
+  const email = session?.user?.email ?? "";
+  const role = session?.user?.app_metadata?.role;
+  const isAdmin = role === "admin" || email.endsWith("@advancedcodegarage.dev") || email === "pasha01118@gmail.com";
 
   useEffect(() => {
     if (!loading && !session && !redirectedRef.current) {
@@ -50,6 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+      <SystemBanner />
       <aside className="w-56 shrink-0 border-r border-slate-800 bg-slate-900/40 hidden md:flex flex-col">
         <div className="h-16 border-b border-slate-800 flex items-center gap-2 px-4">
           <Cpu className="w-6 h-6 text-blue-500" />
@@ -59,24 +65,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
         <nav className="flex-1 py-4 px-3 space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  active
-                    ? "bg-blue-600/15 text-blue-400 border border-blue-700/40"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+          {NAV_ITEMS
+            .filter((item) => !item.admin || isAdmin)
+            .map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    active
+                      ? "bg-blue-600/15 text-blue-400 border border-blue-700/40"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
         </nav>
         <div className="p-3 border-t border-slate-800">
           <div className="text-xs text-slate-500 truncate mb-2">{session?.user?.email}</div>
@@ -112,19 +120,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
             <nav className="flex md:hidden items-center gap-1">
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`p-2 rounded-lg ${active ? "text-blue-400" : "text-slate-500"}`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </Link>
-                );
-              })}
+              {NAV_ITEMS
+                .filter((item) => !item.admin || isAdmin)
+                .map((item) => {
+                  const Icon = item.icon;
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`p-2 rounded-lg ${active ? "text-blue-400" : "text-slate-500"}`}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </Link>
+                  );
+                })}
             </nav>
           </div>
         </header>

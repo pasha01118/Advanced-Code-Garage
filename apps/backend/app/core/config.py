@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     # Optional dedicated key for encrypting user AI-provider API keys.
     # Falls back to SECRET_KEY when unset.
     user_key_encryption_key: str = ""
+    # If set, first-run Admin Sign-Up additionally requires this token.
+    app_bootstrap_token: str = ""
+    # Comma-separated JWT 'sub' allowlist that may act as admin even without
+    # the app_metadata.role claim (legacy accounts).
+    admin_user_ids: str = ""
+    # Token that unlocks the admin "forgot password" reset (no email possible).
+    admin_reset_token: str = ""
+    # Seconds between Sentinel self-healing cycles.
+    sentinel_interval_seconds: int = 60
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
 

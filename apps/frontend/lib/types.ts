@@ -16,6 +16,24 @@ export type AIModelListOut = components["schemas"]["AIModelListOut"];
 export type AIValidateOut = components["schemas"]["AIValidateOut"];
 export type AISaveKeyRequest = components["schemas"]["AISaveKeyRequest"];
 export type AIDeleteOut = components["schemas"]["AIDeleteOut"];
+export type AdminBootstrapRequest = components["schemas"]["AdminBootstrapRequest"];
+export type AdminBootstrapOut = components["schemas"]["AdminBootstrapOut"];
+export type AdminForgotPasswordRequest = components["schemas"]["AdminForgotPasswordRequest"];
+export type AdminForgotPasswordOut = components["schemas"]["AdminForgotPasswordOut"];
+export type AppStateOut = components["schemas"]["AppStateOut"];
+export type SetAppStateRequest = components["schemas"]["SetAppStateRequest"];
+export type SetToggleRequest = components["schemas"]["SetToggleRequest"];
+export type ProviderUsageOut = components["schemas"]["ProviderUsageOut"];
+export type ProviderUsageListOut = components["schemas"]["ProviderUsageListOut"];
+export type SentinelEventOut = components["schemas"]["SentinelEventOut"];
+export type SentinelDiscussionEntryOut = components["schemas"]["SentinelDiscussionEntryOut"];
+export type SentinelSnapshotOut = components["schemas"]["SentinelSnapshotOut"];
+export type RunSentinelOut = components["schemas"]["RunSentinelOut"];
+export type UserRowOut = components["schemas"]["UserRowOut"];
+export type UserListOut = components["schemas"]["UserListOut"];
+export type SuspendUserRequest = components["schemas"]["SuspendUserRequest"];
+export type UpdateAccountRequest = components["schemas"]["UpdateAccountRequest"];
+export type UpdateAccountOut = components["schemas"]["UpdateAccountOut"];
 
 export interface LogEntry {
   timestamp?: string;

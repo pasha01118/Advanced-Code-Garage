@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.core.auth import require_authenticated
 from app.schemas.project import ProjectListOut, ProjectOut
+from app.services.ops_state import require_service
 from app.services.project import ProjectService
 
 router = APIRouter()
@@ -23,7 +24,7 @@ def get_project_service() -> ProjectService:
     return ProjectService()
 
 
-@router.post("/", response_model=ProjectOut)
+@router.post("/", response_model=ProjectOut, dependencies=[Depends(require_service("swarm"))])
 async def initialize_project(
     req: ProjectInitRequest,
     user: AuthenticatedUser,

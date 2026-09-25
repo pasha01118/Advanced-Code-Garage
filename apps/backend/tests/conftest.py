@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.api.v1.ai.route import get_ai_service
@@ -19,6 +20,9 @@ from tests.fakes import (
     FakeModesRepository,
     FakeProjectsRepository,
 )
+
+
+pytest_plugins = ("pytest_asyncio",)
 
 
 @pytest.fixture()
