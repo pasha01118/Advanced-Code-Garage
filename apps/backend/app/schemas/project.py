@@ -13,7 +13,11 @@ class ProjectOut(BaseModel):
     current_agent: Optional[str] = None
     current_task: Optional[str] = None
     created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
+    template_id: Optional[str] = None
+    pinned: bool = False
 
 
 class ProjectListOut(BaseModel):
-    projects: list[ProjectOut] = []
+    projects: list[ProjectOut] = Field(default_factory=list)

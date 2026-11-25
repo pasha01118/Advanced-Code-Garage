@@ -5,6 +5,7 @@ meaningful in /sentinel/snapshot and prevents concurrent manual runs from
 starting a second cycle.
 """
 
+from app.services.notifications import NotificationService
 from app.services.sentinel import SentinelService
 
 _sentinel: SentinelService | None = None
@@ -13,7 +14,7 @@ _sentinel: SentinelService | None = None
 def get_sentinel_service() -> SentinelService:
     global _sentinel
     if _sentinel is None:
-        _sentinel = SentinelService()
+        _sentinel = SentinelService(notifications=NotificationService())
     return _sentinel
 
 

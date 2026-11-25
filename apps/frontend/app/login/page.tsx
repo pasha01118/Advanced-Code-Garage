@@ -1,14 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { bootstrapAdmin } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Cpu, Mail, Lock, User, KeyRound, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
 
 type Mode = "signin" | "signup" | "admin";
 
-export default function LoginPage() {
+/** Only internal paths are safe to use as a post-login redirect. */
+function safeReturnPath(value: string | null): string {
+  if (
+    !value ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\") ||
+    value === "/login"
+  ) {
+    return "/";
+  }
+  return value;
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const reason = searchParams.get("reason");
+  const notice =
+    reason === "switch"
+      ? "Signed out. Sign in with the profile you want to switch to."
+      : reason === "logout"
+        ? "You have been signed out."
+        : null;
+  const returnTo = safeReturnPath(searchParams.get("next"));
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -53,7 +77,7 @@ export default function LoginPage() {
         setSuccess(`${result.message} Signing you in as ${result.email} (${result.role}).`);
         const { error: signInError } = await supabase!.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
-        router.push("/");
+        router.push(returnTo);
       } else if (isSignUp) {
         const { error } = await supabase!.auth.signUp({ email, password });
         if (error) throw error;
@@ -61,7 +85,7 @@ export default function LoginPage() {
       } else {
         const { error } = await supabase!.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push("/");
+        router.push(returnTo);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Authentication failed";
@@ -128,6 +152,12 @@ export default function LoginPage() {
         {success && (
           <div className="mb-4 p-3 bg-green-900/50 border border-green-800 text-green-200 text-sm rounded-lg">
             {success}
+          </div>
+        )}
+
+        {notice && (
+          <div className="mb-4 p-3 bg-blue-950/50 border border-blue-800/60 text-blue-200 text-sm rounded-lg">
+            {notice}
           </div>
         )}
 
@@ -248,5 +278,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-950">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

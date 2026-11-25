@@ -71,6 +71,6 @@ async def test_failed_validation_is_not_cached(monkeypatch):
         lambda *a, **kw: httpx.AsyncClient(transport=httpx.MockTransport(handler)),
     )
     service = AIIntegrationService(repo=FakeAIKeysRepository())
-    result = await service.save_and_validate("u1", "openai", "bad-key", None)
+    result = await service.save_and_validate("u1", "groq", "bad-key", None)
     assert result.status == "error"
-    assert SessionModelCache.get("u1:openai") is None
+    assert SessionModelCache.get("u1:groq") is None

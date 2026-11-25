@@ -41,7 +41,7 @@ export default function TerminalPage() {
         })}
       </div>
 
-      <LiveTerminal />
+      <LiveTerminal showTools />
     </div>
   );
 }

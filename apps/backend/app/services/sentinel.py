@@ -6,6 +6,7 @@ from app.repositories.agent_logs import AgentLogsRepository
 from app.repositories.ai_keys import AIKeysRepository
 from app.services.ai_catalog import list_catalog
 from app.services.ai_integration import SessionModelCache
+from app.services.notifications import NotificationService
 from app.services.ops_state import OpsStateService
 
 sentinel_bus = EventBus()
@@ -34,11 +35,13 @@ class SentinelService:
         ai_keys: AIKeysRepository | None = None,
         logs: AgentLogsRepository | None = None,
         bus: EventBus | None = None,
+        notifications: NotificationService | None = None,
     ) -> None:
         self.repo = repo or AdminRepository()
         self.ops = ops or OpsStateService()
         self.ai_keys = ai_keys or AIKeysRepository()
         self.logs = logs or AgentLogsRepository()
+        self.notifications = notifications
         self.bus = bus or sentinel_bus
         self.running = False
         self.last_run_at: datetime | None = None
@@ -68,6 +71,10 @@ class SentinelService:
                 except Exception:
                     continue
                 await self.bus.publish({"type": "event", "data": event})
+                if self.notifications:
+                    await self.notifications.from_sentinel_event(
+                        event.get("owner_id"), event
+                    )
 
             healed = await self._heal(state)
             # Quiet cycles used to append 2-4 rows every 60 seconds forever.

@@ -39,6 +39,37 @@ export type SuspendUserRequest = components["schemas"]["SuspendUserRequest"];
 export type UpdateAccountRequest = components["schemas"]["UpdateAccountRequest"];
 export type UpdateAccountOut = components["schemas"]["UpdateAccountOut"];
 
+export type PreferencesOut = components["schemas"]["PreferencesOut"];
+// Literal aliases are inlined by Pydantic, so derive the unions from the
+// generated response instead of referencing non-existent named schemas.
+export type Theme = NonNullable<PreferencesOut["theme"]>;
+export type Accent = NonNullable<PreferencesOut["accent"]>;
+export type Density = NonNullable<PreferencesOut["density"]>;
+export type UpdatePreferencesRequest = components["schemas"]["UpdatePreferencesRequest"];
+export type SnippetOut = components["schemas"]["SnippetOut"];
+export type SnippetListOut = components["schemas"]["SnippetListOut"];
+export type SnippetCreateRequest = components["schemas"]["SnippetCreateRequest"];
+export type SnippetUpdateRequest = components["schemas"]["SnippetUpdateRequest"];
+export type HistoryEntryOut = components["schemas"]["HistoryEntryOut"];
+export type HistoryListOut = components["schemas"]["HistoryListOut"];
+export type LogHistoryEntryOut = components["schemas"]["LogHistoryEntryOut"];
+export type LogHistoryOut = components["schemas"]["LogHistoryOut"];
+export type NotificationOut = components["schemas"]["NotificationOut"];
+export type NotificationType = NotificationOut["type"];
+export type NotificationListOut = components["schemas"]["NotificationListOut"];
+export type NotificationCountsOut = components["schemas"]["NotificationCountsOut"];
+export type ProjectTemplateOut = components["schemas"]["ProjectTemplateOut"];
+export type ProjectTemplateListOut = components["schemas"]["ProjectTemplateListOut"];
+export type ProjectMetaUpdateRequest = components["schemas"]["ProjectMetaUpdateRequest"];
+export type BulkProjectRequest = components["schemas"]["BulkProjectRequest"];
+export type BulkProjectResultOut = components["schemas"]["BulkProjectResultOut"];
+export type SearchResultOut = components["schemas"]["SearchResultOut"];
+export type SearchOut = components["schemas"]["SearchOut"];
+export type AuditEntryOut = components["schemas"]["AuditEntryOut"];
+export type AuditListOut = components["schemas"]["AuditListOut"];
+export type MetricPointOut = components["schemas"]["MetricPointOut"];
+export type MetricsOverviewOut = components["schemas"]["MetricsOverviewOut"];
+
 // Agent log frames are hand-written in the backend; the contract does not
 // expose a schema for them.
 export interface LogEntry {

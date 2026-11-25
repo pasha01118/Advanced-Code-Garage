@@ -19,7 +19,17 @@ class FakeProjectsRepository:
     def __init__(self) -> None:
         self.rows: dict[str, dict] = {}
 
-    async def create(self, name, description=None, repo_url=None, owner_id=None):
+    async def create(
+        self,
+        name,
+        description=None,
+        repo_url=None,
+        owner_id=None,
+        *,
+        tags=None,
+        template_id=None,
+    ):
+        now = datetime.now(timezone.utc).isoformat()
         row = {
             "id": str(uuid.uuid4()),
             "name": name,
@@ -30,7 +40,11 @@ class FakeProjectsRepository:
             "progress": 0,
             "current_agent": None,
             "current_task": None,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": now,
+            "updated_at": now,
+            "tags": list(tags or []),
+            "template_id": template_id,
+            "pinned": False,
         }
         self.rows[row["id"]] = row
         return row
@@ -53,15 +67,71 @@ class FakeProjectsRepository:
         items.sort(key=lambda r: r["created_at"], reverse=True)
         return items[:limit]
 
+    async def list_filtered(
+        self, owner_id, *, status=None, tag=None, search=None, limit: int = 100
+    ):
+        items = [
+            dict(r)
+            for r in self.rows.values()
+            if r.get("owner_id") == owner_id
+            and (not status or r.get("status") == status)
+            and (not tag or tag in (r.get("tags") or []))
+            and (not search or search.lower() in str(r.get("name") or "").lower())
+        ]
+        items.sort(key=lambda r: (not bool(r.get("pinned")), r["created_at"]), reverse=True)
+        return items[:limit]
+
+    async def update_for_owner(self, owner_id, project_id, fields):
+        row = self.rows.get(project_id)
+        if row is None or row.get("owner_id") != owner_id:
+            return None
+        row.update(fields)
+        return dict(row)
+
+    async def bulk_update(self, owner_id, project_ids, fields):
+        affected = 0
+        for project_id in project_ids:
+            row = self.rows.get(project_id)
+            if row and row.get("owner_id") == owner_id:
+                row.update(fields)
+                affected += 1
+        return affected
+
+    async def bulk_delete(self, owner_id, project_ids):
+        affected = 0
+        for project_id in project_ids:
+            row = self.rows.get(project_id)
+            if row and row.get("owner_id") == owner_id:
+                self.rows.pop(project_id, None)
+                affected += 1
+        return affected
+
 
 class FakeAuditRepository:
     def __init__(self) -> None:
         self.entries: list[dict] = []
 
-    async def add(self, actor, action, target=None, detail=None):
-        entry = {"actor": actor, "action": action, "target": target, "detail": detail}
+    async def add(self, actor, action, target=None, detail=None, owner_id=None):
+        entry = {
+            "id": str(len(self.entries) + 1),
+            "actor": actor,
+            "action": action,
+            "target": target,
+            "detail": detail,
+            "owner_id": owner_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
         self.entries.append(entry)
         return entry
+
+    async def list(self, owner_id=None, *, limit=100, action=None, since=None):
+        entries = [
+            dict(entry)
+            for entry in reversed(self.entries)
+            if (owner_id is None or entry.get("owner_id") == owner_id)
+            and (not action or entry.get("action") == action)
+        ]
+        return entries[:limit]
 
 
 class FakeLogsRepository:
@@ -81,6 +151,16 @@ class FakeLogsRepository:
 
     async def recent(self, limit: int = 50):
         return list(reversed(self.entries[-limit:]))
+
+    async def for_projects(self, project_ids, *, limit=100, level=None, search=None):
+        entries = [
+            dict(entry)
+            for entry in reversed(self.entries)
+            if entry.get("project_id") in project_ids
+            and (not level or str(entry.get("level") or "").upper() == level.upper())
+            and (not search or search.lower() in str(entry.get("message") or "").lower())
+        ]
+        return entries[:limit]
 
 
 class FakeAIKeysRepository:
@@ -255,3 +335,184 @@ class FakeAdminRepository:
 
     async def list_discussion(self, limit: int = 100) -> list[dict]:
         return self.discussion[-limit:]
+
+
+class FakePreferencesRepository:
+    def __init__(self) -> None:
+        self.rows: dict[str, dict] = {}
+
+    async def get(self, owner_id):
+        return dict(self.rows.get(owner_id) or {})
+
+    async def upsert(self, owner_id, changes):
+        row = {**self.rows.get(owner_id, {}), **changes}
+        row["updated_at"] = datetime.now(timezone.utc).isoformat()
+        self.rows[owner_id] = row
+        return dict(row)
+
+
+class FakeSnippetsRepository:
+    def __init__(self) -> None:
+        self.rows: dict[str, dict] = {}
+        self._id = 0
+
+    async def list(self, owner_id, limit: int = 100):
+        return [dict(r) for r in self.rows.values() if r["owner_id"] == owner_id][:limit]
+
+    async def create(self, owner_id, name, command, description=""):
+        self._id += 1
+        now = datetime.now(timezone.utc).isoformat()
+        row = {
+            "id": str(self._id),
+            "owner_id": owner_id,
+            "name": name,
+            "command": command,
+            "description": description,
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.rows[row["id"]] = row
+        return dict(row)
+
+    async def update(self, owner_id, snippet_id, fields):
+        row = self.rows.get(snippet_id)
+        if row is None or row["owner_id"] != owner_id:
+            return None
+        row.update(fields)
+        return dict(row)
+
+    async def delete(self, owner_id, snippet_id):
+        row = self.rows.get(snippet_id)
+        if row is None or row["owner_id"] != owner_id:
+            return False
+        self.rows.pop(snippet_id)
+        return True
+
+
+class FakeHistoryRepository:
+    def __init__(self) -> None:
+        self.rows: list[dict] = []
+        self._id = 0
+
+    async def list(self, owner_id, limit=100):
+        return [
+            dict(row) for row in reversed(self.rows) if row["owner_id"] == owner_id
+        ][:limit]
+
+    async def add(self, owner_id, command):
+        self._id += 1
+        row = {
+            "id": str(self._id),
+            "owner_id": owner_id,
+            "command": command,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self.rows.append(row)
+        return dict(row)
+
+    async def clear(self, owner_id):
+        before = len(self.rows)
+        self.rows = [row for row in self.rows if row["owner_id"] != owner_id]
+        return before - len(self.rows)
+
+    async def prune(self, owner_id, keep: int = 200):
+        pass
+
+
+class FakeNotificationsRepository:
+    def __init__(self) -> None:
+        self.rows: list[dict] = []
+        self._id = 0
+
+    async def list(self, owner_id, limit=100, unread_only=False):
+        return [
+            dict(row)
+            for row in reversed(self.rows)
+            if row["owner_id"] == owner_id
+            and (not unread_only or not row.get("read_at"))
+        ][:limit]
+
+    async def find_source(self, owner_id, source, source_id):
+        for row in self.rows:
+            if (
+                row["owner_id"] == owner_id
+                and row.get("source") == source
+                and row.get("source_id") == source_id
+            ):
+                return dict(row)
+        return None
+
+    async def create(
+        self,
+        owner_id,
+        *,
+        title,
+        body="",
+        type="info",
+        source="system",
+        source_id=None,
+        metadata=None,
+    ):
+        self._id += 1
+        row = {
+            "id": str(self._id),
+            "owner_id": owner_id,
+            "type": type,
+            "title": title,
+            "body": body,
+            "source": source,
+            "source_id": source_id,
+            "read_at": None,
+            "metadata": metadata or {},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self.rows.append(row)
+        return dict(row)
+
+    async def mark_read(self, owner_id, notification_id):
+        for row in self.rows:
+            if row["owner_id"] == owner_id and row["id"] == notification_id:
+                row["read_at"] = datetime.now(timezone.utc).isoformat()
+                return dict(row)
+        return None
+
+    async def mark_all_read(self, owner_id):
+        count = 0
+        for row in self.rows:
+            if row["owner_id"] == owner_id and not row.get("read_at"):
+                row["read_at"] = datetime.now(timezone.utc).isoformat()
+                count += 1
+        return count
+
+    async def delete(self, owner_id, notification_id):
+        for row in self.rows:
+            if row["owner_id"] == owner_id and row["id"] == notification_id:
+                self.rows.remove(row)
+                return True
+        return False
+
+    async def clear(self, owner_id):
+        before = len(self.rows)
+        self.rows = [row for row in self.rows if row["owner_id"] != owner_id]
+        return before - len(self.rows)
+
+
+class FakeTemplatesRepository:
+    def __init__(self) -> None:
+        self.rows = [
+            {
+                "id": "blank",
+                "name": "Blank project",
+                "description": "Start from an empty workspace.",
+                "default_description": "",
+                "default_status": "queued",
+                "tags": [],
+                "sort_order": 0,
+            }
+        ]
+
+    async def list(self):
+        return list(self.rows)
+
+    async def get(self, template_id):
+        return next((dict(row) for row in self.rows if row["id"] == template_id), None)

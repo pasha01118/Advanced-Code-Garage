@@ -24,6 +24,12 @@ Useful checks: `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build` (from `apps/f
 second rewrite in `next.config.ts`. Both live streams (terminal logs and the admin Sentinel feed) use
 authenticated SSE consumed by a fetch-based client — not WebSockets or WebRTC.
 
+## Account menu
+
+The header avatar menu is available on desktop and mobile. **Log Out** ends the Supabase session and
+returns to the login screen. **Switch Profile** signs out and opens the login screen with a
+"switch profile" notice, returning to the page you were on after signing in as the other account.
+
 ## Contract
 
 `pnpm gen:api` regenerates `../../packages/contract/generated/api.ts` from

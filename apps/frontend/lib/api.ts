@@ -27,6 +27,24 @@ import type {
   UserListOut,
   UpdateAccountRequest,
   UpdateAccountOut,
+  PreferencesOut,
+  UpdatePreferencesRequest,
+  SnippetOut,
+  SnippetListOut,
+  SnippetCreateRequest,
+  SnippetUpdateRequest,
+  HistoryListOut,
+  LogHistoryOut,
+  NotificationOut,
+  NotificationListOut,
+  NotificationCountsOut,
+  ProjectTemplateListOut,
+  ProjectMetaUpdateRequest,
+  BulkProjectRequest,
+  BulkProjectResultOut,
+  SearchOut,
+  AuditListOut,
+  MetricsOverviewOut,
 } from "./types";
 import { supabase } from "./supabaseClient";
 
@@ -69,6 +87,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(detail);
   }
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -100,8 +119,24 @@ export function initializeProject(body: ProjectInitRequest): Promise<ProjectInit
   });
 }
 
-export function listProjects(): Promise<ProjectListOut> {
-  return requestAuthed("/v1/projects/");
+export interface ProjectFilters {
+  status?: string;
+  tag?: string;
+  search?: string;
+  limit?: number;
+}
+
+function queryString(values: object): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+  }
+  const encoded = params.toString();
+  return encoded ? `?${encoded}` : "";
+}
+
+export function listProjects(filters: ProjectFilters = {}): Promise<ProjectListOut> {
+  return requestAuthed(`/v1/projects/${queryString(filters)}`);
 }
 
 export function getProjectStatus(projectId: string): Promise<ProjectStatus> {
@@ -241,6 +276,135 @@ export function reactivateUser(userId: string): Promise<{ user_id: string; suspe
 
 export function updateAdminAccount(payload: UpdateAccountRequest): Promise<UpdateAccountOut> {
   return requestAuthed("/v1/admin/account", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+// -- Preferences --------------------------------------------------------------
+
+export function getPreferences(): Promise<PreferencesOut> {
+  return requestAuthed("/v1/preferences/");
+}
+
+export function updatePreferences(payload: UpdatePreferencesRequest): Promise<PreferencesOut> {
+  return requestAuthed("/v1/preferences/", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+// -- Terminal power tools -----------------------------------------------------
+
+export function listSnippets(): Promise<SnippetListOut> {
+  return requestAuthed("/v1/terminal/snippets");
+}
+
+export function createSnippet(payload: SnippetCreateRequest): Promise<SnippetOut> {
+  return requestAuthed("/v1/terminal/snippets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateSnippet(id: string, payload: SnippetUpdateRequest): Promise<SnippetOut> {
+  return requestAuthed(`/v1/terminal/snippets/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteSnippet(id: string): Promise<void> {
+  return requestAuthed(`/v1/terminal/snippets/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function listCommandHistory(limit = 100): Promise<HistoryListOut> {
+  return requestAuthed(`/v1/terminal/history${queryString({ limit })}`);
+}
+
+export function addCommandHistory(command: string): Promise<{ id: string; saved: boolean }> {
+  return requestAuthed("/v1/terminal/history", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ command }),
+  });
+}
+
+export function clearCommandHistory(): Promise<void> {
+  return requestAuthed("/v1/terminal/history", { method: "DELETE" });
+}
+
+export function getLogHistory(filters: {
+  limit?: number;
+  level?: string;
+  search?: string;
+} = {}): Promise<LogHistoryOut> {
+  return requestAuthed(`/v1/terminal/logs${queryString(filters)}`);
+}
+
+// -- Notifications ------------------------------------------------------------
+
+export function listNotifications(unreadOnly = false, limit = 100): Promise<NotificationListOut> {
+  return requestAuthed(`/v1/notifications/${queryString({ unread_only: unreadOnly, limit })}`);
+}
+
+export function getNotificationCounts(): Promise<NotificationCountsOut> {
+  return requestAuthed("/v1/notifications/counts");
+}
+
+export function markNotificationRead(id: string): Promise<NotificationOut> {
+  return requestAuthed(`/v1/notifications/${encodeURIComponent(id)}/read`, { method: "POST" });
+}
+
+export function markAllNotificationsRead(): Promise<{ updated: number }> {
+  return requestAuthed("/v1/notifications/read-all", { method: "POST" });
+}
+
+export function deleteNotification(id: string): Promise<void> {
+  return requestAuthed(`/v1/notifications/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function clearNotifications(): Promise<void> {
+  return requestAuthed("/v1/notifications/", { method: "DELETE" });
+}
+
+// -- Workspace upgrade APIs ---------------------------------------------------
+
+export function searchWorkspace(q: string): Promise<SearchOut> {
+  return requestAuthed(`/v1/workspace/search${queryString({ q })}`);
+}
+
+export function listProjectTemplates(): Promise<ProjectTemplateListOut> {
+  return requestAuthed("/v1/workspace/templates");
+}
+
+export function getWorkspaceMetrics(): Promise<MetricsOverviewOut> {
+  return requestAuthed("/v1/workspace/metrics");
+}
+
+export function getAuditLog(filters: {
+  all_users?: boolean;
+  limit?: number;
+  action?: string;
+  since?: string;
+} = {}): Promise<AuditListOut> {
+  return requestAuthed(`/v1/workspace/audit${queryString(filters)}`);
+}
+
+export function updateProjectMeta(id: string, payload: ProjectMetaUpdateRequest): Promise<{ id: string; updated: boolean }> {
+  return requestAuthed(`/v1/workspace/projects/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function bulkProjectAction(payload: BulkProjectRequest): Promise<BulkProjectResultOut> {
+  return requestAuthed("/v1/workspace/projects/bulk", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
