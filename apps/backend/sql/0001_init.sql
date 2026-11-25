@@ -63,35 +63,42 @@ create table if not exists public.agent_logs (
 );
 
 -- ---------------------------------------------------------------------------
--- RLS
+-- RLS. Backend writes use the SERVICE_ROLE key and bypass these policies, so
+-- client roles get only the minimum read access required by the UI.
 -- ---------------------------------------------------------------------------
 alter table public.projects       enable row level security;
 alter table public.execution_modes enable row level security;
 alter table public.audit_log      enable row level security;
 alter table public.agent_logs     enable row level security;
 
+drop policy if exists "projects_select_own" on public.projects;
 create policy "projects_select_own" on public.projects
-    for select using (auth.uid() = owner_id);
+    for select to authenticated using (auth.uid() = owner_id);
 
+drop policy if exists "projects_insert_own" on public.projects;
 create policy "projects_insert_own" on public.projects
-    for insert with check (auth.uid() = owner_id);
+    for insert to authenticated with check (auth.uid() = owner_id);
 
--- Single-tenant MVP: mode is world-readable, backend (service role) writes.
+-- Mode is readable by signed-in users; only the backend service role writes.
+drop policy if exists "modes_read" on public.execution_modes;
 create policy "modes_read" on public.execution_modes
-    for select using (true);
+    for select to authenticated using (true);
 
-create policy "modes_insert" on public.execution_modes
-    for insert with check (true);
+drop policy if exists "modes_insert" on public.execution_modes;
+drop policy if exists "modes_update" on public.execution_modes;
 
-create policy "modes_update" on public.execution_modes
-    for update with check (true);
+-- Audit and agent-log rows are written by the backend service role only; reads
+-- are restricted to the owner of the related project.
+drop policy if exists "audit_insert" on public.audit_log;
 
--- Writes allowed (backend/authenticated), reads restricted to service role.
-create policy "audit_insert" on public.audit_log
-    for insert with check (true);
+drop policy if exists "agent_logs_read" on public.agent_logs;
+create policy "agent_logs_read_own" on public.agent_logs
+    for select to authenticated
+    using (
+        exists (
+            select 1 from public.projects p
+            where p.id = agent_logs.project_id and p.owner_id = auth.uid()
+        )
+    );
 
-create policy "agent_logs_read" on public.agent_logs
-    for select using (true);
-
-create policy "agent_logs_insert" on public.agent_logs
-    for insert with check (true);
+drop policy if exists "agent_logs_insert" on public.agent_logs;

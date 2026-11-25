@@ -245,6 +245,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Auth Me */
+        get: operations["auth_me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/bootstrap": {
         parameters: {
             query?: never;
@@ -637,7 +654,7 @@ export interface components {
             /** Name */
             name?: string | null;
             /** Bootstrap Token */
-            bootstrap_token?: string | null;
+            bootstrap_token: string;
         };
         /** AdminForgotPasswordOut */
         AdminForgotPasswordOut: {
@@ -703,6 +720,15 @@ export interface components {
          * @enum {string}
          */
         AppStatus: "running" | "maintenance" | "shutdown";
+        /** AuthMeOut */
+        AuthMeOut: {
+            /** User Id */
+            user_id: string;
+            /** Email */
+            email?: string | null;
+            /** Is Admin */
+            is_admin: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -829,6 +855,8 @@ export interface components {
             events_added: number;
             /** Discussion Added */
             discussion_added: number;
+            /** Skipped */
+            skipped: boolean;
         };
         /** SentinelDiscussionEntryOut */
         SentinelDiscussionEntryOut: {
@@ -1366,6 +1394,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auth_me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthMeOut"];
                 };
             };
         };

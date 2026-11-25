@@ -1,17 +1,35 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import hmac
+from typing import Annotated
 
-from app.core.auth import require_admin
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
+from app.core.auth import _is_admin, require_authenticated
 from app.schemas.auth import (
     AdminBootstrapOut,
     AdminBootstrapRequest,
     AdminForgotPasswordOut,
     AdminForgotPasswordRequest,
+    AuthMeOut,
 )
 from app.services.admin_users import AdminUsersService
 from app.services.auth_bootstrap import BootstrapError, BootstrapService
 from app.core.config import get_settings
+from app.core.rate_limit import enforce_rate_limit
+from app.services.ops_state import require_service
 
 router = APIRouter()
+
+AuthenticatedUser = Annotated[dict, Depends(require_authenticated)]
+
+
+@router.get("/me", response_model=AuthMeOut)
+async def auth_me(user: AuthenticatedUser) -> AuthMeOut:
+    """Expose the caller's effective admin status (including the env allowlist)."""
+    return AuthMeOut(
+        user_id=user.get("sub", ""),
+        email=user.get("email"),
+        is_admin=_is_admin(user),
+    )
 
 
 def get_bootstrap_service() -> BootstrapService:
@@ -22,7 +40,19 @@ def get_admin_users_service() -> AdminUsersService:
     return AdminUsersService()
 
 
-@router.post("/bootstrap", response_model=AdminBootstrapOut)
+async def _limit_bootstrap(request: Request) -> None:
+    await enforce_rate_limit("bootstrap", request)
+
+
+async def _limit_password_reset(request: Request) -> None:
+    await enforce_rate_limit("admin-reset", request)
+
+
+@router.post(
+    "/bootstrap",
+    response_model=AdminBootstrapOut,
+    dependencies=[Depends(_limit_bootstrap), Depends(require_service("signups"))],
+)
 async def bootstrap_admin(
     req: AdminBootstrapRequest,
     service: BootstrapService = Depends(get_bootstrap_service),
@@ -48,11 +78,17 @@ async def bootstrap_admin(
 
 
 async def _resolve_admin_users() -> list[dict]:
+    settings = get_settings()
+    allowlisted = {s.strip() for s in settings.admin_user_ids.split(",") if s.strip()}
     users = await AdminUsersService().list_users()
-    return [u for u in users if u["admin"]]
+    return [u for u in users if u["admin"] or u.get("id") in allowlisted]
 
 
-@router.post("/admin/forgot-password", response_model=AdminForgotPasswordOut)
+@router.post(
+    "/admin/forgot-password",
+    response_model=AdminForgotPasswordOut,
+    dependencies=[Depends(_limit_password_reset)],
+)
 async def admin_forgot_password(
     req: AdminForgotPasswordRequest,
 ) -> AdminForgotPasswordOut:
@@ -68,7 +104,7 @@ async def admin_forgot_password(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Admin password reset is disabled on this deployment.",
         )
-    if settings.admin_reset_token != req.reset_token:
+    if not hmac.compare_digest(settings.admin_reset_token, req.reset_token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid reset token.")
 
     admins = await _resolve_admin_users()

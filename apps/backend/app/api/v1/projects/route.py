@@ -37,7 +37,7 @@ async def initialize_project(
 
 @router.get("/", response_model=ProjectListOut)
 async def list_projects(user: AuthenticatedUser, service: ProjectService = Depends(get_project_service)) -> ProjectListOut:
-    return ProjectListOut(projects=await service.list_recent())
+    return ProjectListOut(projects=await service.list_recent(user.get("sub")))
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
@@ -46,7 +46,8 @@ async def get_project_status(
     user: AuthenticatedUser,
     service: ProjectService = Depends(get_project_service),
 ) -> ProjectOut:
-    project = await service.get(project_id)
+    # Service-role DB access bypasses RLS, so ownership must be enforced here.
+    project = await service.get(project_id, user.get("sub"))
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
     return ProjectOut(**project)

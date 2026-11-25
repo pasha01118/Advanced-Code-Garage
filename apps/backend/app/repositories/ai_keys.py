@@ -94,6 +94,17 @@ class AIKeysRepository(SupabaseRepository):
         rows = res.data or []
         return bool(rows)
 
+    async def list_failing(self) -> list[dict]:
+        """Failing per-user keys, so Sentinel can scope a cache flush to one owner."""
+        res = await self._run(
+            self.db.table(TABLENAME)
+            .select("owner_id,provider,status,message")
+            .in_("status", ["error", "quota"])
+            .limit(200)
+            .execute
+        )
+        return res.data or []
+
     async def aggregate_providers(self) -> list[dict]:
         """Per-provider health across all users (for the Sentinel scan)."""
         res = await self._run(

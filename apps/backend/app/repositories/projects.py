@@ -14,10 +14,11 @@ class ProjectsRepository(SupabaseRepository):
         rows = res.data or []
         return rows[0] if rows else {}
 
-    async def get(self, project_id: str) -> dict | None:
-        res = await self._run(
-            self.db.table("projects").select("*").eq("id", project_id).limit(1).execute
-        )
+    async def get(self, project_id: str, owner_id: str | None = None) -> dict | None:
+        query = self.db.table("projects").select("*").eq("id", project_id)
+        if owner_id:
+            query = query.eq("owner_id", owner_id)
+        res = await self._run(query.limit(1).execute)
         return self._row(res)
 
     async def update(self, project_id: str, **fields) -> dict | None:
@@ -26,12 +27,9 @@ class ProjectsRepository(SupabaseRepository):
         )
         return self._row(res)
 
-    async def list_recent(self, limit: int = 50) -> list[dict]:
-        res = await self._run(
-            self.db.table("projects")
-            .select("*")
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute
-        )
+    async def list_recent(self, owner_id: str | None = None, limit: int = 50) -> list[dict]:
+        query = self.db.table("projects").select("*")
+        if owner_id:
+            query = query.eq("owner_id", owner_id)
+        res = await self._run(query.order("created_at", desc=True).limit(limit).execute)
         return res.data or []

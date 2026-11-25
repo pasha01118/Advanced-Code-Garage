@@ -7,7 +7,7 @@ from app.core.auth import require_admin, require_authenticated
 from app.main import app
 from app.repositories.admin_repo import AdminRepository
 from app.services.admin_users import AdminUsersService
-from app.services.ops_state import OpsStateService
+from app.services.ops_state import OpsStateService, get_ops_service as get_global_ops_service
 from app.services.sentinel import SentinelService
 
 from tests.fakes import (
@@ -79,6 +79,16 @@ def admin_client(admin_fakes):
                 },
             ]
 
+        async def get_user(self, user_id):
+            for row in await self.list_users():
+                if row["id"] == user_id:
+                    return {
+                        "id": row["id"],
+                        "app_metadata": {"role": "admin" if row["admin"] else None},
+                        "banned_until": row["banned_until"],
+                    }
+            return {}
+
         async def set_identity(self, user_id, *, email=None, new_password=None):
             payload = {}
             if email:
@@ -95,6 +105,7 @@ def admin_client(admin_fakes):
 
     app.dependency_overrides[get_admin_repo] = override_admin_repo
     app.dependency_overrides[get_ops_service] = override_ops_service
+    app.dependency_overrides[get_global_ops_service] = override_ops_service
     app.dependency_overrides[get_sentinel_service] = override_sentinel_service
     app.dependency_overrides[get_admin_users_service] = lambda: FakeAdminUsersService()
     app.dependency_overrides[auth_get_admin_users_service] = lambda: FakeAdminUsersService()

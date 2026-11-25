@@ -1,11 +1,15 @@
 import type { components } from "@acg/contract";
 
+export type AuthMeOut = components["schemas"]["AuthMeOut"];
 export type SwarmResponse = components["schemas"]["AgentSwarmResponse"];
-export type ExecutionMode = SwarmResponse["system_mode"];
+// The contract types system_mode as a string with a pattern; these are the only
+// modes the API accepts.
+export type ExecutionMode = "Autonomous" | "AI-Man" | "Manual";
 export type ProjectInitRequest = components["schemas"]["ProjectInitRequest"];
 export type ProjectInitResponse = components["schemas"]["ProjectOut"];
 export type ProjectStatus = components["schemas"]["ProjectOut"];
 export type ProjectOut = components["schemas"]["ProjectOut"];
+export type ProjectListOut = components["schemas"]["ProjectListOut"];
 
 export type ProviderCatalogEntry = components["schemas"]["ProviderCatalogEntry"];
 export type ProviderCatalogListOut = components["schemas"]["ProviderCatalogListOut"];
@@ -35,8 +39,10 @@ export type SuspendUserRequest = components["schemas"]["SuspendUserRequest"];
 export type UpdateAccountRequest = components["schemas"]["UpdateAccountRequest"];
 export type UpdateAccountOut = components["schemas"]["UpdateAccountOut"];
 
+// Agent log frames are hand-written in the backend; the contract does not
+// expose a schema for them.
 export interface LogEntry {
-  timestamp?: string;
+  timestamp?: string | null;
   level: string;
   agent: string;
   message: string;

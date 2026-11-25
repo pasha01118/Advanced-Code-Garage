@@ -14,10 +14,10 @@ import {
   Loader2,
   Activity,
 } from "lucide-react";
+import { useIsAdmin } from "@/lib/use-admin";
 import { useAuthSession } from "@/lib/use-auth-session";
 import { useLiveSwarm } from "@/lib/use-live-swarm";
 import { supabase } from "@/lib/supabaseClient";
-import { SystemBanner } from "@/components/SystemBanner";
 
 const NAV_ITEMS = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -34,9 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const redirectedRef = useRef(false);
 
-  const email = session?.user?.email ?? "";
-  const role = session?.user?.app_metadata?.role;
-  const isAdmin = role === "admin" || email.endsWith("@advancedcodegarage.dev") || email === "pasha01118@gmail.com";
+  const isAdmin = useIsAdmin(Boolean(session));
 
   useEffect(() => {
     if (!loading && !session && !redirectedRef.current) {
@@ -55,7 +53,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
-      <SystemBanner />
       <aside className="w-56 shrink-0 border-r border-slate-800 bg-slate-900/40 hidden md:flex flex-col">
         <div className="h-16 border-b border-slate-800 flex items-center gap-2 px-4">
           <Cpu className="w-6 h-6 text-blue-500" />

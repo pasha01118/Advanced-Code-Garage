@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { bootstrapAdmin } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { Cpu, Mail, Lock, User, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
+import { Cpu, Mail, Lock, User, KeyRound, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
 
 type Mode = "signin" | "signup" | "admin";
 
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [bootstrapToken, setBootstrapToken] = useState("");
   const [mode, setMode] = useState<Mode>("signin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +33,10 @@ export default function LoginPage() {
       setError("Supabase client not initialized. Check environment variables.");
       return;
     }
+    if (isAdmin && !bootstrapToken.trim()) {
+      setError("Bootstrap token is required for first-run admin sign-up.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -43,6 +48,7 @@ export default function LoginPage() {
           email,
           password,
           ...(name ? { name } : {}),
+          bootstrap_token: bootstrapToken.trim(),
         });
         setSuccess(`${result.message} Signing you in as ${result.email} (${result.role}).`);
         const { error: signInError } = await supabase!.auth.signInWithPassword({ email, password });
@@ -127,28 +133,49 @@ export default function LoginPage() {
 
         <form onSubmit={handleAuth} className="space-y-4">
           {isAdmin && (
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Display Name <span className="text-slate-500">(optional)</span>
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="Operator Name"
-                />
+            <>
+              <div>
+                <label htmlFor="admin-name" className="block text-sm font-medium text-slate-300 mb-1">
+                  Display Name <span className="text-slate-500">(optional)</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <input
+                    id="admin-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Operator Name"
+                  />
+                </div>
               </div>
-            </div>
+              <div>
+                <label htmlFor="bootstrap-token" className="block text-sm font-medium text-slate-300 mb-1">
+                  Bootstrap Token <span className="text-slate-500">(if required)</span>
+                </label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <input
+                    id="bootstrap-token"
+                    type="password"
+                    value={bootstrapToken}
+                    onChange={(e) => setBootstrapToken(e.target.value)}
+                    autoComplete="off"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Server bootstrap token"
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1">Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
               <input
+                id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -160,10 +187,11 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

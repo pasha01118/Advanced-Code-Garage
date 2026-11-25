@@ -49,9 +49,10 @@ class TestSentinelService:
         result = await sentinel_service.run_cycle()
         assert result["events_added"] >= 1
         events = await sentinel_fakes["admin_repo"].list_events()
-        quota_events = [e for e in events if e["status"] == "open" and "quota" in e["suggested_fix"].lower()]
+        quota_events = [e for e in events if "quota" in e["suggested_fix"].lower()]
         assert len(quota_events) >= 1
         assert "quota" in quota_events[0]["suggested_fix"].lower()
+        assert quota_events[0]["owner_id"] == "owner1"
 
     @pytest.mark.asyncio
     async def test_scan_providers_error(self, sentinel_service, sentinel_fakes):
@@ -61,8 +62,9 @@ class TestSentinelService:
         result = await sentinel_service.run_cycle()
         assert result["events_added"] >= 1
         events = await sentinel_fakes["admin_repo"].list_events()
-        error_events = [e for e in events if e["status"] == "open" and "rejected" in e["suggested_fix"].lower()]
+        error_events = [e for e in events if "rejected" in e["suggested_fix"].lower()]
         assert len(error_events) >= 1
+        assert error_events[0]["owner_id"] == "owner1"
 
     @pytest.mark.asyncio
     async def test_scan_logs_errors(self, sentinel_service, sentinel_fakes):
@@ -77,9 +79,10 @@ class TestSentinelService:
     @pytest.mark.asyncio
     async def test_auto_heal_flush_cache(self, sentinel_service, sentinel_fakes):
         event = await sentinel_fakes["admin_repo"].insert_event({
-            "severity": "warn", "scope": "system", "agent": "Test",
+            "severity": "warn", "scope": "provider", "agent": "Test",
             "title": "Cache issue", "message": "Stale cache",
-            "status": "open", "suggested_fix": "flush_cache", "auto_fix_report": ""
+            "status": "open", "suggested_fix": "flush_cache", "auto_fix_report": "",
+            "owner_id": "owner1", "provider": "google",
         })
         result = await sentinel_service.run_cycle()
         assert result["discussion_added"] >= 1
@@ -87,6 +90,18 @@ class TestSentinelService:
         healed = [e for e in events if e["id"] == event["id"] and e["status"] == "auto_fixed"]
         assert len(healed) == 1
         assert "flushed" in healed[0]["auto_fix_report"].lower()
+
+    @pytest.mark.asyncio
+    async def test_flush_cache_without_owner_is_not_reported_as_healed(self, sentinel_service, sentinel_fakes):
+        event = await sentinel_fakes["admin_repo"].insert_event({
+            "severity": "warn", "scope": "provider", "agent": "Test",
+            "title": "Cache issue", "message": "Stale cache",
+            "status": "open", "suggested_fix": "flush_cache", "auto_fix_report": "",
+        })
+        result = await sentinel_service.run_cycle()
+        assert result["discussion_added"] == 0
+        events = await sentinel_fakes["admin_repo"].list_events()
+        assert next(e for e in events if e["id"] == event["id"])["status"] == "open"
 
     @pytest.mark.asyncio
     async def test_discussion_composed(self, sentinel_service, sentinel_fakes):

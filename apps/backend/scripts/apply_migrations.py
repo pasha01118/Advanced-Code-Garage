@@ -4,8 +4,9 @@ Usage:
     export DATABASE_URL="postgresql://postgres.<ref>:<password>@<pooler-host>:6543/postgres"
     python scripts/apply_migrations.py
 
-Applies every .sql file in backend/sql/ in lexicographic order.
-Old files that have already been tracked in the migrations table are skipped.
+Applies every .sql file in backend/sql/ in lexicographic order. The whole run
+is one transaction behind an advisory lock, so a failure never leaves a
+half-applied migration behind for the next run to trip over.
 """
 
 import os
@@ -14,6 +15,7 @@ from pathlib import Path
 import psycopg
 
 SQL_DIR = Path(__file__).resolve().parent.parent / "sql"
+MIGRATION_LOCK = 0x4143475F4D4947  # "ACG_MIG"
 
 
 def main() -> None:
@@ -21,31 +23,31 @@ def main() -> None:
     if not database_url:
         raise SystemExit("DATABASE_URL is required (pooled Supabase connection string).")
 
-    applied: set[str] = set()
-    with psycopg.connect(database_url, autocommit=True) as conn:
-        conn.execute(
-            """
-            create table if not exists _schema_migrations (
-                file_name text primary key,
-                applied_at timestamptz not null default now()
+    with psycopg.connect(database_url) as conn:
+        with conn.cursor() as cur:
+            # Serialize concurrent migrators; the lock is released on commit.
+            cur.execute("select pg_advisory_xact_lock(%s)", (MIGRATION_LOCK,))
+            cur.execute(
+                """
+                create table if not exists _schema_migrations (
+                    file_name text primary key,
+                    applied_at timestamptz not null default now()
+                )
+                """
             )
-            """
-        )
-        for (name,) in conn.execute("select file_name from _schema_migrations"):
-            applied.add(name)
+            cur.execute("select file_name from _schema_migrations")
+            applied = {row[0] for row in cur.fetchall()}
 
-        for sql_file in sorted(SQL_DIR.glob("*.sql")):
-            if sql_file.name in applied:
-                print(f"skip  {sql_file.name}")
-                continue
-            sql = sql_file.read_text()
-            with conn.cursor() as cur:
-                cur.execute(sql)
-            conn.execute(
-                "insert into _schema_migrations (file_name) values (%s)", (sql_file.name,)
-            )
-            print(f"apply {sql_file.name}")
-
+            for sql_file in sorted(SQL_DIR.glob("*.sql")):
+                if sql_file.name in applied:
+                    print(f"skip  {sql_file.name}")
+                    continue
+                cur.execute(sql_file.read_text())
+                cur.execute(
+                    "insert into _schema_migrations (file_name) values (%s)", (sql_file.name,)
+                )
+                print(f"apply {sql_file.name}")
+        conn.commit()
     print("migrations complete")
 
 

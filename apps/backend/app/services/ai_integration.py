@@ -13,12 +13,16 @@ Loose "session cache": model lists are held in-process for our instance and
 refreshed on demand within 10 minutes.
 """
 
+import ipaddress
 import json
 import logging
+import socket
 import time
+from urllib.parse import urlparse
 
 import httpx
 
+from app.core.config import get_settings
 from app.core.crypto import decrypt_secret, encrypt_secret
 from app.repositories.ai_keys import AIKeysRepository
 from app.schemas.ai import AIKeyStatus, AIKeyStatusListOut, AIModelInfo, AIModelListOut, AIValidateOut
@@ -42,6 +46,49 @@ def _redact(text: str, secret: str | None) -> str:
     if secret:
         text = text.replace(secret, "***")
     return text
+
+
+def _safe_ollama_url(url: str) -> str:
+    """Reject server-side request forgery in user-supplied Ollama URLs.
+
+    Literal private/loopback/link-local IPs are never allowed. `localhost` is
+    allowed only outside production for local development.
+    """
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not host
+        or parsed.username
+        or parsed.password
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("Invalid Ollama base URL; use http(s)://host[:port]")
+    lowered = host.lower()
+    if lowered == "localhost" or lowered.endswith(".localhost"):
+        if get_settings().is_production:
+            raise ValueError("Loopback Ollama URLs are not allowed in production")
+        return url.rstrip("/")
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        # Resolve before connecting: a hostname pointing at loopback, RFC1918,
+        # link-local or metadata addresses is just as dangerous as a literal IP.
+        # (A fully rebinding-safe solution needs egress-level DNS pinning.)
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        try:
+            infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+            resolved = [ipaddress.ip_address(info[4][0]) for info in infos]
+        except (OSError, ValueError) as exc:
+            raise ValueError("Ollama hostname could not be resolved") from exc
+        if not resolved or any(not ip.is_global for ip in resolved):
+            raise ValueError("Ollama hostname resolves to a private or reserved address")
+        return url.rstrip("/")
+    if not address.is_global:
+        raise ValueError("Private or reserved Ollama URLs are not allowed")
+    return url.rstrip("/")
 
 
 def _model_tags(model_id: str) -> list[str] | None:
@@ -72,6 +119,11 @@ class SessionModelCache:
 
     @classmethod
     def set(cls, key: str, models: list[dict]) -> None:
+        # Simple bounded store: expiry alone let deleted users/providers
+        # accumulate entries for the life of the worker.
+        if key not in cls._store and len(cls._store) >= 500:
+            oldest = next(iter(cls._store))
+            cls._store.pop(oldest, None)
         cls._store[key] = (time.monotonic(), models)
 
     @classmethod
@@ -93,7 +145,7 @@ class AIIntegrationService:
     @staticmethod
     def _endpoint(entry, api_key: str | None, base_url: str | None):
         if entry.kind == "ollama":
-            return f"{base_url.rstrip('/')}/api/tags", {}, None
+            return f"{_safe_ollama_url(base_url or '')}/api/tags", {}, None
         if entry.kind == "google":
             return f"{entry.base_url}/models", {}, {"key": api_key}
         return (
@@ -236,7 +288,13 @@ class AIIntegrationService:
             message=result.message,
             model_count=result.model_count,
         )
-        SessionModelCache.set(f"{owner_id}:{provider}", [m.model_dump() for m in result.models])
+        cache_key = f"{owner_id}:{provider}"
+        if result.status == "active":
+            SessionModelCache.set(cache_key, [m.model_dump() for m in result.models])
+        else:
+            # Never cache a failed validation: it would hide recovery for the
+            # whole TTL and break the provider LED until the cache expires.
+            SessionModelCache.pop(cache_key)
 
     # -- Public API ------------------------------------------------------------
 
@@ -275,6 +333,8 @@ class AIIntegrationService:
 
         key = api_key.strip() if api_key else ""
         url = ollama_base_url.strip() if ollama_base_url else None
+        if provider == "ollama" and url:
+            url = _safe_ollama_url(url)
 
         await self.repo.upsert(
             owner_id,
@@ -302,6 +362,8 @@ class AIIntegrationService:
 
         key = decrypt_secret(row.get(VALID_KEYS_FIELD)) if entry.requires_key else None
         url = row.get("ollama_base_url") or entry.base_url
+        if entry.kind == "ollama":
+            url = _safe_ollama_url(url)
 
         result = await self._run_validation(entry, key, url)
         await self._persist_validation(owner_id, provider, result)
@@ -323,6 +385,8 @@ class AIIntegrationService:
 
         key = decrypt_secret(row.get(VALID_KEYS_FIELD)) if entry.requires_key else None
         url = row.get("ollama_base_url") or entry.base_url
+        if entry.kind == "ollama":
+            url = _safe_ollama_url(url)
 
         result = await self._run_validation(entry, key, url)
         await self._persist_validation(owner_id, provider, result)

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FolderGit2, Plus, Loader2, RefreshCw, GitBranch, CheckCircle2, AlertTriangle } from "lucide-react";
-import { initializeProject, getProjectStatus } from "@/lib/api";
+import { initializeProject, getProjectStatus, listProjects } from "@/lib/api";
 import type { ProjectOut, ProjectStatus } from "@/lib/types";
 
 interface TrackedProject {
@@ -21,6 +21,34 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<TrackedProject[]>([]);
   const [checkingId, setCheckingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await listProjects();
+        if (cancelled) return;
+        setProjects((prev) => {
+          const known = new Set(prev.map((p) => p.id));
+          const loaded = result.projects
+            .filter((p) => !known.has(p.id))
+            .map<TrackedProject>((p) => ({
+              id: p.id,
+              name: p.name,
+              description: p.description ?? undefined,
+              statusInfo: p,
+            }));
+          // Locally added projects stay in place; server ones are merged in.
+          return [...prev, ...loaded];
+        });
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load projects");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

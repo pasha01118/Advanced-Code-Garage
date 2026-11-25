@@ -121,7 +121,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/logs/": {
@@ -144,7 +149,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/projects/": {
@@ -505,6 +515,32 @@
         }
       }
     },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Auth Me",
+        "operationId": "auth_me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMeOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/bootstrap": {
       "post": {
         "tags": [
@@ -608,7 +644,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -1336,22 +1377,17 @@
             "title": "Name"
           },
           "bootstrap_token": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
             "title": "Bootstrap Token"
           }
         },
         "type": "object",
         "required": [
           "email",
-          "password"
+          "password",
+          "bootstrap_token"
         ],
         "title": "AdminBootstrapRequest"
       },
@@ -1519,6 +1555,35 @@
           "shutdown"
         ],
         "title": "AppStatus"
+      },
+      "AuthMeOut": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "is_admin"
+        ],
+        "title": "AuthMeOut"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1833,12 +1898,17 @@
           "discussion_added": {
             "type": "integer",
             "title": "Discussion Added"
+          },
+          "skipped": {
+            "type": "boolean",
+            "title": "Skipped"
           }
         },
         "type": "object",
         "required": [
           "events_added",
-          "discussion_added"
+          "discussion_added",
+          "skipped"
         ],
         "title": "RunSentinelOut"
       },

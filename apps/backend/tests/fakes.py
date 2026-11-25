@@ -35,8 +35,11 @@ class FakeProjectsRepository:
         self.rows[row["id"]] = row
         return row
 
-    async def get(self, project_id: str):
-        return self.rows.get(project_id)
+    async def get(self, project_id: str, owner_id=None):
+        row = self.rows.get(project_id)
+        if row is None or (owner_id is not None and row.get("owner_id") != owner_id):
+            return None
+        return row
 
     async def update(self, project_id: str, **fields):
         row = self.rows.get(project_id)
@@ -45,8 +48,8 @@ class FakeProjectsRepository:
         row.update(fields)
         return row
 
-    async def list_recent(self, limit: int = 50):
-        items = [dict(r) for r in self.rows.values()]
+    async def list_recent(self, owner_id=None, limit: int = 50):
+        items = [dict(r) for r in self.rows.values() if owner_id is None or r.get("owner_id") == owner_id]
         items.sort(key=lambda r: r["created_at"], reverse=True)
         return items[:limit]
 
@@ -118,6 +121,11 @@ class FakeAIKeysRepository:
 
     async def delete(self, owner_id, provider):
         return self.rows.pop((owner_id, provider), None) is not None
+
+    async def list_failing(self) -> list[dict]:
+        return [
+            dict(row) for row in self.rows.values() if row.get("status") in ("error", "quota")
+        ]
 
     async def aggregate_providers(self) -> list[dict]:
         """Aggregate key statuses across all owners per provider."""

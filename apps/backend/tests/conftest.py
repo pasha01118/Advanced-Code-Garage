@@ -11,9 +11,11 @@ from app.routers.agents import get_mode_service
 from app.services.ai_integration import AIIntegrationService, SessionModelCache
 from app.services.audit import AuditService
 from app.services.mode import ModeService
+from app.services.ops_state import OpsStateService, get_ops_service as get_global_ops_service
 from app.services.project import ProjectService
 
 from tests.fakes import (
+    FakeAdminRepository,
     FakeAIKeysRepository,
     FakeAuditRepository,
     FakeLogsRepository,
@@ -33,6 +35,7 @@ def fakes():
         "audit": FakeAuditRepository(),
         "logs": FakeLogsRepository(),
         "ai_keys": FakeAIKeysRepository(),
+        "admin": FakeAdminRepository(),
     }
 
 
@@ -55,9 +58,13 @@ def client(fakes):
     def override_ai_service() -> AIIntegrationService:
         return AIIntegrationService(repo=fakes["ai_keys"])
 
+    def override_global_ops_service() -> OpsStateService:
+        return OpsStateService(repo=fakes["admin"])
+
     app.dependency_overrides[get_mode_service] = override_mode_service
     app.dependency_overrides[get_project_service] = override_project_service
     app.dependency_overrides[get_ai_service] = override_ai_service
+    app.dependency_overrides[get_global_ops_service] = override_global_ops_service
     app.dependency_overrides[require_authenticated] = _authed_user
     SessionModelCache.clear()
     yield TestClient(app)
@@ -65,5 +72,7 @@ def client(fakes):
 
 
 @pytest.fixture()
-def bare_client():
+def bare_client(fakes):
+    app.dependency_overrides[get_global_ops_service] = lambda: OpsStateService(repo=fakes["admin"])
     yield TestClient(app)
+    app.dependency_overrides.clear()

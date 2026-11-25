@@ -1,4 +1,5 @@
 import type {
+  AuthMeOut,
   AdminBootstrapOut,
   AdminBootstrapRequest,
   AdminForgotPasswordOut,
@@ -15,6 +16,7 @@ import type {
   LogEntry,
   ProjectInitRequest,
   ProjectInitResponse,
+  ProjectListOut,
   ProjectStatus,
   ProviderCatalogListOut,
   RunSentinelOut,
@@ -35,7 +37,12 @@ function apiUrl(path: string): string {
   return `${base}${path}`;
 }
 
-async function authHeaders(): Promise<Record<string, string>> {
+// SSE endpoints live under the same /api base as REST calls.
+export function streamUrl(path: string): string {
+  return apiUrl(path);
+}
+
+export async function authHeaders(): Promise<Record<string, string>> {
   if (!supabase) return {};
   try {
     const { data } = await supabase.auth.getSession();
@@ -93,12 +100,16 @@ export function initializeProject(body: ProjectInitRequest): Promise<ProjectInit
   });
 }
 
+export function listProjects(): Promise<ProjectListOut> {
+  return requestAuthed("/v1/projects/");
+}
+
 export function getProjectStatus(projectId: string): Promise<ProjectStatus> {
-  return request(`/v1/projects/${projectId}`);
+  return requestAuthed(`/v1/projects/${encodeURIComponent(projectId)}`);
 }
 
 export function getLogsStreamUrl(): string {
-  return `${API_BASE}/v1/logs/stream`;
+  return streamUrl("/v1/logs/stream");
 }
 
 export function parseLogEvent(raw: string): LogEntry | null {
@@ -142,6 +153,10 @@ export function deleteAIKey(provider: string): Promise<AIDeleteOut> {
   return requestAuthed(`/v1/ai/keys/${encodeURIComponent(provider)}`, {
     method: "DELETE",
   });
+}
+
+export function getAuthMe(): Promise<AuthMeOut> {
+  return requestAuthed("/v1/auth/me");
 }
 
 // -- Admin bootstrap (first-run sign-up, no confirmation email) -------------
@@ -205,7 +220,7 @@ export function runSentinel(): Promise<RunSentinelOut> {
 }
 
 export function getSentinelStreamUrl(): string {
-  return `${API_BASE}/v1/admin/sentinel/stream`;
+  return streamUrl("/v1/admin/sentinel/stream");
 }
 
 export function listUsers(): Promise<UserListOut> {

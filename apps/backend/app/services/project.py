@@ -18,6 +18,16 @@ STAGES = [
 
 STAGE_DELAY_SECONDS = 0.8
 
+# Strong references to background pipelines: a bare create_task() can be
+# garbage-collected mid-flight, and shutdown must be able to cancel them.
+_pipeline_tasks: set[asyncio.Task] = set()
+
+
+def cancel_pipeline_tasks() -> None:
+    """Cancel all in-flight project pipelines (called during app shutdown)."""
+    for task in tuple(_pipeline_tasks):
+        task.cancel()
+
 
 class ProjectService:
     def __init__(
@@ -40,7 +50,9 @@ class ProjectService:
         owner_id: str | None = None,
     ) -> dict:
         project = await self.projects.create(name, description, repo_url, owner_id)
-        project_id = str(project.get("id"))
+        if not project or not project.get("id"):
+            raise RuntimeError("Project insert did not return a row")
+        project_id = str(project["id"])
         await self.audit.record(
             actor=owner_id or "anonymous",
             action="project.create",
@@ -48,14 +60,16 @@ class ProjectService:
             detail={"name": name},
         )
         await self.projects.update(project_id, status="analyzing", progress=10)
-        asyncio.create_task(self._run_pipeline(project_id))
+        task = asyncio.create_task(self._run_pipeline(project_id, owner_id))
+        _pipeline_tasks.add(task)
+        task.add_done_callback(_pipeline_tasks.discard)
         return await self.projects.get(project_id)
 
-    async def get(self, project_id: str) -> dict | None:
-        return await self.projects.get(project_id)
+    async def get(self, project_id: str, owner_id: str | None = None) -> dict | None:
+        return await self.projects.get(project_id, owner_id)
 
-    async def list_recent(self, limit: int = 50) -> list[dict]:
-        return await self.projects.list_recent(limit)
+    async def list_recent(self, owner_id: str | None = None, limit: int = 50) -> list[dict]:
+        return await self.projects.list_recent(owner_id, limit)
 
     def _build_prompt(self, stage, name: str, description: str | None) -> str:
         _, _, agent, task, _, fallback = stage
@@ -67,10 +81,11 @@ class ProjectService:
             "and your concrete takeaway for this phase. Plain text only."
         )
 
-    async def _run_pipeline(self, project_id: str) -> None:
+    async def _run_pipeline(self, project_id: str, owner_id: str | None = None) -> None:
         project = await self.projects.get(project_id) or {}
         name = project.get("name") or "Untitled project"
         description = project.get("description")
+        owner = project.get("owner_id") or owner_id
         try:
             for start, end, agent, task, level, fallback in STAGES:
                 await asyncio.sleep(STAGE_DELAY_SECONDS)
@@ -90,6 +105,7 @@ class ProjectService:
                     "agent": agent,
                     "message": message,
                     "project_id": project_id,
+                    "owner_id": owner,
                 }
                 await self.logs.add(level, agent, message, project_id)
                 await bus.publish(event)
@@ -100,5 +116,30 @@ class ProjectService:
                 current_agent=None,
                 current_task=None,
             )
-        except Exception:
-            await self.logs.add("ERROR", "System", f"Pipeline failed for project {project_id}", project_id)
+        except asyncio.CancelledError:
+            await self.projects.update(
+                project_id,
+                status="queued",
+                current_agent=None,
+                current_task=None,
+            )
+            raise
+        except Exception as exc:
+            message = f"Pipeline failed for project {project_id}: {type(exc).__name__}"
+            await self.projects.update(
+                project_id,
+                status="failed",
+                current_agent=None,
+                current_task=None,
+            )
+            await self.logs.add("ERROR", "System", message, project_id)
+            await bus.publish(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "level": "ERROR",
+                    "agent": "System",
+                    "message": message,
+                    "project_id": project_id,
+                    "owner_id": owner,
+                }
+            )

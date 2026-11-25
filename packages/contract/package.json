@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "gen:api": "openapi-typescript ../../packages/contract/openapi.json -o ../../packages/contract/generated/api.ts"
+  },
   "types": "src/index.ts",
   "exports": {
     ".": {
