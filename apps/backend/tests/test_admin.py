@@ -1,7 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.v1.admin.route import get_admin_repo, get_admin_users_service, get_ops_service, get_sentinel_service
+from app.api.v1.admin.route import (
+    _still_admin,
+    get_admin_repo,
+    get_admin_users_service,
+    get_ops_service,
+    get_sentinel_service,
+)
 from app.api.v1.auth.route import get_admin_users_service as auth_get_admin_users_service
 from app.core.auth import require_admin, require_authenticated
 from app.main import app
@@ -229,3 +235,35 @@ class TestAdminUsers:
         assert data["user_id"] == "admin-user"
         assert "email changed" in data["message"]
         assert "password changed" in data["message"]
+
+
+class TestStillAdminMetadata:
+    class _Ops:
+        async def ensure_available(self, feature=None):
+            return None
+
+    @pytest.mark.asyncio
+    async def test_empty_current_metadata_does_not_restore_jwt_role(self):
+        class Users:
+            async def get_user(self, user_id):
+                return {"id": user_id, "app_metadata": {}}
+
+        jwt_user = {
+            "sub": "stream-subject-xyz",
+            "role": "authenticated",
+            "app_metadata": {"role": "admin"},
+        }
+        assert await _still_admin(None, jwt_user, Users(), self._Ops()) is False
+
+    @pytest.mark.asyncio
+    async def test_unchanged_admin_metadata_still_passes(self):
+        class Users:
+            async def get_user(self, user_id):
+                return {"id": user_id, "app_metadata": {"role": "admin"}}
+
+        jwt_user = {
+            "sub": "stream-subject-xyz",
+            "role": "authenticated",
+            "app_metadata": {"role": "admin"},
+        }
+        assert await _still_admin(None, jwt_user, Users(), self._Ops()) is True

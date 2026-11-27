@@ -18,6 +18,7 @@ function safeReturnPath(pathname: string): string {
 export function ProfileMenu({ email }: { email?: string | null }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<AccountAction | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
@@ -49,23 +50,40 @@ export function ProfileMenu({ email }: { email?: string | null }) {
   const signOut = async (action: AccountAction) => {
     if (pending) return;
     setPending(action);
+    setError(null);
     setOpen(false);
 
     try {
       if (supabase) {
         // Global sign-out invalidates other sessions too. If the server call
         // fails (e.g. offline), still clear this browser so switching works.
-        const { error } = await supabase.auth.signOut({ scope: "global" });
-        if (error) await supabase.auth.signOut({ scope: "local" });
+        const { error: globalError } = await supabase.auth.signOut({ scope: "global" });
+        const current = await supabase.auth.getSession();
+        if (globalError || current.error || current.data.session) {
+          const { error: localError } = await supabase.auth.signOut({ scope: "local" });
+          const remaining = await supabase.auth.getSession();
+          if (localError || remaining.error || remaining.data.session) {
+            throw new Error(
+              localError?.message ||
+                remaining.error?.message ||
+                "Your session is still active. Please try again.",
+            );
+          }
+        }
       }
-    } finally {
-      const next = safeReturnPath(pathname);
-      router.replace(
-        action === "switch"
-          ? `/login?reason=switch&next=${encodeURIComponent(next)}`
-          : "/login?reason=logout",
-      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not sign out. Please try again.");
+      setPending(null);
+      setOpen(true);
+      return;
     }
+
+    const next = safeReturnPath(pathname);
+    router.replace(
+      action === "switch"
+        ? `/login?reason=switch&next=${encodeURIComponent(next)}`
+        : "/login?reason=logout",
+    );
   };
 
   const initial = email?.trim().charAt(0)?.toUpperCase() || "?";
@@ -75,7 +93,10 @@ export function ProfileMenu({ email }: { email?: string | null }) {
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          setError(null);
+          setOpen((value) => !value);
+        }}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
@@ -98,6 +119,11 @@ export function ProfileMenu({ email }: { email?: string | null }) {
             <p className="text-[11px] uppercase tracking-wide text-slate-500">Signed in as</p>
             <p className="mt-0.5 truncate text-sm text-slate-200">{email || "Unknown account"}</p>
           </div>
+          {error && (
+            <p role="alert" className="break-words border-b border-slate-800 px-3 py-2 text-xs text-red-400">
+              {error}
+            </p>
+          )}
           <button
             type="button"
             role="menuitem"

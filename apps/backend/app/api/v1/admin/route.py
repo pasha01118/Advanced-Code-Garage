@@ -200,7 +200,7 @@ async def _still_admin(
         fresh = await users.get_user(sub) if hasattr(users, "get_user") else current
         if _is_banned(fresh.get("banned_until")):
             return False
-        metadata = fresh.get("app_metadata") or current.get("app_metadata") or {}
+        metadata = fresh.get("app_metadata") or {}
         return _is_admin({**current, "app_metadata": metadata})
     except Exception:
         return False
