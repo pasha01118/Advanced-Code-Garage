@@ -1,6 +1,11 @@
 __pycache__/
 *.pyc
 .env
+.env*.local
 venv/
+.venv/
+.next/
+.vercel
+*.tsbuildinfo
 .DS_Store
 node_modules/

@@ -14,10 +14,10 @@ JWKS_TTL_SECONDS = 3600.0
 ALGORITHMS = ["ES256", "RS256"]
 
 
-async def _get_jwks() -> dict:
+async def _get_jwks(*, force: bool = False) -> dict:
     global _jwks_cache, _jwks_at
     now = time.time()
-    if _jwks_cache is not None and (now - _jwks_at) < JWKS_TTL_SECONDS:
+    if not force and _jwks_cache is not None and (now - _jwks_at) < JWKS_TTL_SECONDS:
         return _jwks_cache
     settings = get_settings()
     url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
@@ -54,6 +54,16 @@ async def require_user(
     try:
         jwks = await _get_jwks()
         return _decode(credentials.credentials, jwks)
+    except JWTError as exc:
+        # Only an unknown signing key justifies a refresh; malformed or expired
+        # tokens must not let unauthenticated callers hammer the JWKS endpoint.
+        if "Unknown signing key" not in str(exc):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token") from exc
+        try:
+            refreshed = await _get_jwks(force=True)
+            return _decode(credentials.credentials, refreshed)
+        except Exception as refresh_exc:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token") from refresh_exc
     except HTTPException:
         raise
     except Exception as exc:

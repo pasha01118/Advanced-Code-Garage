@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend (pytest)
@@ -23,6 +26,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
+      - name: OpenAPI spec up to date
+        working-directory: .
+        run: |
+          (cd apps/backend && python scripts/dump_openapi.py > "$RUNNER_TEMP/openapi.json")
+          git diff --no-index --exit-code packages/contract/openapi.json "$RUNNER_TEMP/openapi.json"
       - name: Run tests
         run: python -m pytest -q
 

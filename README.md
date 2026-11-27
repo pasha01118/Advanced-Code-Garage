@@ -64,29 +64,27 @@
 
 ### 🌐 Architectural Overview
 
-```
+```text
 +---------------------------------------------------------------------------------------------------+
-|                                 CLIENT / EDGE PRESENTATION LAYER                                  |
-|  Cloudflare Edge CDN / Cloudflare Pages                                                            |
-|  - Vite + React 19 + TypeScript + Tailwind CSS                                                    |
-|  - Real-Time WebSockets (Terminal Logs) & WebRTC Data/Audio Engine (Git-Sir HUD)                   |
+|                              CLIENT / EDGE LAYER (Vercel)                                          |
+|  Next.js 16 App Router + React 19 + TypeScript + Tailwind CSS                                     |
+|  - Authenticated SSE streams (terminal logs + Sentinel feed), fetch-based client                  |
 +---------------------------------------------------------------------------------------------------+
-                    │ HTTPS / WSS                  │ REST / Auth
-                    ▼                              ▼
+                    │ HTTPS / REST + SSE        │ Supabase Auth (ES256/RS256 JWT)
+                    ▼                           ▼
 +----------------------------------------------------+  +-------------------------------------------+
 |          APPLICATION CORE / ORCHESTRATION          |  |       PERSISTENCE & STATE LAYER           |
-|  FastAPI Engine (Outbound Cloudflare Tunnel)       |  |  Supabase Managed PostgreSQL 15+          |
-|  - Master Finite State Machine Orchestration       |  |  - Row Level Security (RLS) Enforced      |
-|  - Inbound Git Webhook Verification (HMAC-SHA256)  |  |  - pgvector Workspace Embeddings          |
-|  - AST Exception Safety & Sentinel Repair Loop     |  |  - AES-256-GCM Vault Credentials          |
+|  FastAPI on Render                                 |  |  Supabase Managed PostgreSQL 15+          |
+|  - Project pipeline stages on an in-process bus    |  |  - Row Level Security (RLS) Enforced      |
+|  - Sentinel monitor: provider/error scan + heal    |  |  - pgvector embeddings: not provisioned   |
+|  - Persisted execution modes and audit trail       |  |  - Fernet-encrypted BYOK credentials      |
 +----------------------------------------------------+  +-------------------------------------------+
                     │                                                      │
-                    ▼ Isolation / Sandboxing                               ▼ Model Allocation
+                    ▼ Model Allocation                                     ▼ Admin
 +----------------------------------------------------+  +-------------------------------------------+
-|             ISOLATED RUNTIME RUNNER                |  |            AI INFERENCE DISPATCH          |
-|  POSIX Micro-Sandbox Worker (/tmp/acg_sandboxes)   |  |  Local Hardware Probing + BYOK Cloud      |
-|  - Chroot directory isolation & hard memory caps   |  |  - Tier 0-2: Ollama (0.5B to 30B models)  |
-|  - Multi-Cloud: Cloudflare, Vercel, Docker, Local  |  |  - Tier 3: Google AI Studio (Gemini Pro)  |
+|            AI INFERENCE DISPATCH                   |  |  /admin: app_state, provider_metrics,      |
+|  Google AI Studio direct or Vercel proxy (BYOK)    |  |  sentinel_events, sentinel_discussion    |
+|  -> Ollama fallback -> staged simulated output     |  |  (route-level feature toggles enforced)    |
 +----------------------------------------------------+  +-------------------------------------------+
 ```
 
@@ -123,43 +121,43 @@
   <tbody>
     <tr>
       <td style="color: #39ff14;"><b>Edge Presentation</b></td>
-      <td><code>Cloudflare Pages</code> + <code>React 19</code></td>
-      <td>Unmetered bandwidth, automated CDN caching, real-time split-diff terminal displays, and low-latency bidirectional WebRTC voice streaming via <b>Git-Sir</b>.</td>
+      <td><code>Next.js 16 App Router</code> + <code>React 19</code> on Vercel</td>
+      <td>App Router dashboard with Tailwind CSS; authenticated SSE streams for terminal logs and Sentinel telemetry. No WebSockets, WebRTC or voice transport.</td>
     </tr>
     <tr>
       <td style="color: #39ff14;"><b>Async Core Engine</b></td>
       <td><code>FastAPI</code> + <code>Python 3.11+</code></td>
-      <td>Finite State Machine (FSM) event bus managing directional transitions: <i>Intake &rarr; Research &rarr; Architecture &rarr; Synthesis &rarr; Audit &rarr; Delivery</i>.</td>
+      <td>Project pipeline stages on an in-process async event bus feeding SSE subscribers; execution modes persisted in Supabase.</td>
     </tr>
     <tr>
-      <td style="color: #39ff14;"><b>Ingress & Tunnels</b></td>
-      <td><code>Cloudflare Tunnel</code> (<code>cloudflared</code>)</td>
-      <td>Outbound-only ingress eliminating static IP costs, open firewall ports, and middle-tier reverse proxies.</td>
+      <td style="color: #39ff14;"><b>Deployment / Ingress</b></td>
+      <td><code>Vercel</code> + <code>Render</code></td>
+      <td>Vercel <code>/api/*</code> rewrite to the Render-hosted FastAPI service; no static IP or outbound tunnel is required.</td>
     </tr>
     <tr>
       <td style="color: #39ff14;"><b>Persistence & Identity</b></td>
       <td><code>Supabase</code> (PostgreSQL 15+)</td>
-      <td>Row Level Security (RLS), multi-tenant session isolation, and <code>pgvector</code> embeddings for architectural code grounding.</td>
+      <td>Row Level Security, Supabase Auth (ES256/RS256 JWT) and an admin allowlist. <code>pgvector</code> embeddings are not yet provisioned.</td>
     </tr>
     <tr>
       <td style="color: #39ff14;"><b>Cryptographic Vault</b></td>
-      <td><code>AES-256-GCM</code> Envelope Encryption</td>
-      <td>User BYOK credentials encrypted at rest; accessed strictly via short-lived ephemeral tokens. Raw keys never touch logs or Git histories.</td>
+      <td><code>Fernet</code> symmetric encryption</td>
+      <td>Per-user BYOK provider keys encrypted at rest in <code>user_ai_keys</code> (RLS). Uses <code>USER_KEY_ENCRYPTION_KEY</code> when set, otherwise <code>SECRET_KEY</code>.</td>
     </tr>
     <tr>
-      <td style="color: #39ff14;"><b>Micro-Sandbox Isolation</b></td>
-      <td><code>POSIX Jail</code> (<code>/tmp/acg_sandboxes</code>)</td>
-      <td>Compilation, linting, and package installations run inside disposable working trees with strict CPU, thread, and memory quotas.</td>
+      <td style="color: #39ff14;"><b>Micro-Sandbox Isolation</b> <i>(future work)</i></td>
+      <td><code>POSIX Jail</code> <i>(planned)</i></td>
+      <td>Disposable working trees with CPU/memory limits are planned; no sandbox runner is wired today.</td>
     </tr>
     <tr>
-      <td style="color: #39ff14;"><b>Self-Healing Sentinel</b></td>
-      <td><code>AST Engine</code> + <code>CI/CD Webhooks</code></td>
-      <td>Extracts stack traces from failed builds, synthesizes AST fixes with try/catch boundaries, and re-triggers tests automatically.</td>
+      <td style="color: #39ff14;"><b>Sentinel Monitor</b></td>
+      <td><code>SentinelService</code> + Supabase</td>
+      <td>Live: scheduled provider/error scan, cache-flush heal and AI-engineer discussion in <code>sentinel_events</code>/<code>sentinel_discussion</code>. AST auto-fix on CI webhooks is future work.</td>
     </tr>
     <tr>
       <td style="color: #39ff14;"><b>Dynamic Model Router</b></td>
       <td><code>Gemini 3.6 Flash</code> + <code>Ollama</code></td>
-      <td>Hardware-aware routing: direct Google AI Studio calls or a first-party Vercel proxy (shared-secret, secret-redacted), falling back to local Ollama and finally a staged simulated mode.</td>
+      <td>Hardware-aware routing: Google AI Studio direct or via a first-party Vercel proxy (shared-secret, secret-redacted), falling back to local Ollama and finally staged simulated mode.</td>
     </tr>
   </tbody>
 </table>
@@ -189,6 +187,8 @@
 </h2>
 
 <p>ACG balances high-speed autonomy with zero-trust developer oversight across three dynamic operational states:</p>
+
+<p><i>Modes are persisted, and feature toggles are enforced at the route level (see the status section below). The matrix below describes the intended operating model.</i></p>
 
 <table>
   <thead>
@@ -288,7 +288,7 @@
 advanced-code-garage/
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml                    # Backend pytest + contract drift + frontend lint/typecheck/build
+│       ├── ci.yml                    # Backend pytest + OpenAPI/contract drift + frontend lint/typecheck/build
 │       └── keep-awake.yml            # Render free-tier keep-alive (every 10 min)
 ├── apps/
 │   ├── backend/
@@ -308,22 +308,25 @@ advanced-code-garage/
 │   │   ├── schemas/                  # Pydantic response/request models (incl. admin + auth)
 │   │   ├── sql/0001_init.sql         # Tables + RLS policies (idempotent migrations)
 │   │   ├── sql/0002_ai_keys.sql      # user_ai_keys (encrypted BYOK vault) + RLS
-│   │   ├── sql/0003_admin.sql        # app_state, sentinel events/discussion, admin_user_ids, provider_metrics + RLS
+│   │   ├── sql/0003_admin.sql        # app_state, sentinel_events/discussion, provider_metrics + RLS
 │   │   ├── scripts/apply_migrations.py # psycopg migration runner
-│   │   ├── tests/                    # pytest + TestClient with in-memory fakes (68 passing)
+│   │   ├── scripts/dump_openapi.py   # emits live FastAPI schema for CI drift check
+│   │   ├── tests/                    # pytest + TestClient with in-memory fakes
 │   │   ├── render.yaml               # Render blueprint (secrets dashboard-managed)
+│   │   ├── .env.example              # backend env var template
 │   │   └── requirements.txt
 │   └── frontend/
 │       ├── app/                      # Next.js App Router (dashboard, terminal, projects, ai-integration, admin, login, genai)
 │       ├── components/               # LiveTerminal, SystemBanner, BannerWrapper etc.
-│       ├── lib/                      # api.ts, types.ts (@acg/contract), supabaseClient.ts, hooks
+│       ├── lib/                      # api.ts, types.ts (@acg/contract), stream-sse.ts, supabaseClient.ts, hooks
 │       ├── vercel.json               # /api/* → Render rewrite
 │       └── package.json
 ├── packages/
 │   └── contract/
 │       ├── openapi.json              # Live FastAPI contract (source of truth)
 │       ├── generated/api.ts          # openapi-typescript output (drift-checked in CI)
-│       └── src/index.ts              # @acg/contract typed re-exports
+│       ├── src/index.ts              # @acg/contract typed re-exports
+│       └── package.json              # gen:api script (openapi-typescript)
 ├── pnpm-workspace.yaml               # pnpm monorepo apps/* + packages/*
 ├── package.json                      # workspace root (packageManager: pnpm@12.6.0)
 ├── pnpm-lock.yaml
@@ -332,33 +335,37 @@ advanced-code-garage/
 └── README.md
 ```
 
-> `sentinel_healer.py`, sandboxing, voice, ChatOps, and CI-webhook modules remain future work
-> (the Sentinel *monitor* is live; the AST-fix healer on CI webhooks is not).
-> The current backend provides real persistence (Supabase), ES256 auth, mode
-> routing, a real model router (Google Gemini direct or via a first-party Vercel
-> proxy, falling back to Ollama/simulated), the project pipeline, the SSE log
-> stream the UI consumes, and an AI Integration vault: 11 free-tier providers
-> (OpenRouter, Groq, SambaNova, Cerebras, DeepSeek, Qwen, Mistral, Cohere, xAI,
-> Ollama, plus Google) whose per-user API keys are Fernet-encrypted at rest
-> (`user_ai_keys`, RLS) and validated on first connect via a cheap models-list
-> call, with live model lists (session-cached) surfaced on the `/ai-integration`
-> dashboard. An Admin Panel (`/admin`, admin-only) exposes app state
-> (running/maintenance/shutdown), 7 feature toggles (execution endpoints 503 when
-> disabled), provider usage metrics, Sentinel telemetry (events, AI-engineer
-> discussion, live SSE stream, click-to-run cycle), user management
-> (suspend/reactivate), and admin account settings — plus a global banner when
-> the app is in maintenance. The free-tier Google key caps Gemini at ~20
-> requests/day on `gemini-3.6-flash`; when that quota is exhausted the pipeline
-> degrades gracefully to staged simulated output.
+> The Sentinel *monitor* is live (provider/error scan, cache-flush heal, AI-engineer discussion in
+> `sentinel_events`/`sentinel_discussion` on a scheduled loop); AST auto-fix (`sentinel_healer.py`),
+> CI-webhook triggers, ChatOps, sandboxing/isolated runners, Docker deployment and voice/Git-Sir are
+> future work. `pgvector` embeddings are not provisioned.
+>
+> The current backend provides Supabase persistence, ES256/RS256 auth, mode routing, a model router
+> (Gemini direct or via the first-party Vercel proxy, falling back to Ollama/simulated), the project
+> pipeline, and two authenticated SSE streams (terminal logs and Sentinel feed) consumed by a
+> fetch-based client. An AI Integration vault covers 11 free-tier providers (OpenRouter, Groq,
+> SambaNova, Cerebras, DeepSeek, Qwen, Mistral, Cohere, xAI, Ollama, plus Google): per-user keys are
+> Fernet-encrypted at rest in `user_ai_keys` (RLS) and validated on first connect via a models-list
+> call, with live model lists on `/ai-integration`.
+>
+> The admin panel (`/admin`, admin-only) exposes app state (running/maintenance/shutdown), stored
+> feature toggles, `provider_metrics`, Sentinel telemetry (`sentinel_events`, `sentinel_discussion`,
+> live SSE, click-to-run cycle), user suspend/reactivate, and account settings. **Five toggles are
+> enforced at the route level**: `swarm` (agent swarm, mode, project creation), `ai_routing` (AI
+> endpoints), `telemetry` (log stream), `sentinel` (Sentinel admin endpoints and SSE), and `signups`
+> (first-run admin bootstrap) return 503 when off; `git_ops` and `deployments` remain stored-only.
+> First-run admin sign-up requires `APP_BOOTSTRAP_TOKEN`; a global banner
+> appears during maintenance/shutdown. The free-tier Google key caps Gemini at ~20 requests/day on
+> `gemini-3.6-flash`; pipeline then degrades gracefully to staged simulated output.
 
 ---
 
 <!-- ==================== REMOTE BOT CHATOPS ==================== -->
 <h2 style="color: #39ff14; text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);">
-  🤖 Remote ChatOps Integration
+  🤖 Remote ChatOps Integration (Planned)
 </h2>
 
-<p>Developers can monitor and govern the platform remotely via Telegram and Discord slash commands authenticated through Supabase HMAC-backed webhooks:</p>
+<p><b>Future work — not implemented.</b> Planned Telegram/Discord slash commands (design below):</p>
 
 | Command | Parameters | Description | Responding Agent |
 | :--- | :--- | :--- | :--- |
@@ -381,14 +388,18 @@ cd advanced-code-garage
 corepack enable && corepack prepare pnpm@12.6.0 --activate
 pnpm install
 
-# 3. Configure credentials
-#   - apps/backend/.env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SECRET_KEY,
-#     GOOGLE_AI_STUDIO_KEY, optional GOOGLE_AI_STUDIO_PROXY/_TOKEN,
-#     USER_KEY_ENCRYPTION_KEY (defaults to SECRET_KEY), OLLAMA_BASE_URL
+# 3. Configure credentials (see apps/backend/.env.example)
+#   - apps/backend/.env: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY),
+#     SUPABASE_SERVICE_ROLE_KEY, SECRET_KEY, APP_BOOTSTRAP_TOKEN (required for first admin),
+#     optional USER_KEY_ENCRYPTION_KEY (defaults to SECRET_KEY), ADMIN_RESET_TOKEN,
+#     ADMIN_USER_IDS, SENTINEL_INTERVAL_SECONDS, GOOGLE_AI_STUDIO_KEY,
+#     GOOGLE_AI_STUDIO_PROXY/_TOKEN, OLLAMA_BASE_URL, FRONTEND_URLS, ENVIRONMENT
 #   - apps/frontend/.env.local: NEXT_PUBLIC_SUPABASE_URL,
-#     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+#     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_API_URL=http://localhost:8000
+#     (omit NEXT_PUBLIC_API_URL on Vercel; vercel.json rewrites /api)
 
 # 4. Run backend & UI
+cd apps/backend && python -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 cd apps/backend && ./.venv/bin/uvicorn app.main:app --reload --port 8000
 cd apps/frontend && pnpm dev
 ```

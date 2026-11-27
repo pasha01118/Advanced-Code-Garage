@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -35,11 +34,14 @@ import {
   reactivateUser,
   updateAdminAccount,
 } from "@/lib/api";
+import { subscribeSSE } from "@/lib/stream-sse";
+import { useIsAdmin } from "@/lib/use-admin";
 import type {
   AppStateOut,
   ProviderUsageOut,
   SentinelEventOut,
   SentinelDiscussionEntryOut,
+  UpdateAccountRequest,
   UserRowOut,
 } from "@/lib/types";
 
@@ -62,15 +64,22 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState<Set<string>>(() => new Set());
   const [accountForm, setAccountForm] = useState<{ email: string; new_password: string }>({ email: "", new_password: "" });
   const [accountMsg, setAccountMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const unsubscribeStreamRef = useRef<(() => void) | null>(null);
   const [sentinelStreamConnected, setSentinelStreamConnected] = useState(false);
 
   const email = session?.user?.email ?? "";
-  const role = session?.user?.app_metadata?.role;
-  const isAdmin = role === "admin" || email.endsWith("@advancedcodegarage.dev") || email === "pasha01118@gmail.com";
+  const isAdmin = useIsAdmin(Boolean(session));
+
+  const startBusy = (key: string) => setBusy((prev) => new Set(prev).add(key));
+  const stopBusy = (key: string) =>
+    setBusy((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
 
   const loadOverview = useCallback(async () => {
     try {
@@ -123,130 +132,150 @@ export default function AdminPage() {
   }, [loadOverview, loadProviders, loadSentinel, loadUsers]);
 
   useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+    // Do not fire admin-only requests for signed-in non-admins. Defer the load
+    // so the effect body itself never sets state synchronously.
+    if (!isAdmin) return;
+    void Promise.resolve().then(loadAll);
+  }, [isAdmin, loadAll]);
 
   const connectSentinelStream = useCallback(() => {
-    if (eventSourceRef.current) return;
-    try {
-      const url = getSentinelStreamUrl();
-      const es = new EventSource(url, { withCredentials: true });
-      eventSourceRef.current = es;
-      es.onopen = () => setSentinelStreamConnected(true);
-      es.onerror = () => setSentinelStreamConnected(false);
-      es.onmessage = (event) => {
+    if (unsubscribeStreamRef.current) return;
+    unsubscribeStreamRef.current = subscribeSSE(getSentinelStreamUrl(), {
+      onOpen: () => setSentinelStreamConnected(true),
+      onDisconnect: () => setSentinelStreamConnected(false),
+      onMessage: (data) => {
         try {
-          const data = JSON.parse(event.data);
-          if (data.type === "event") {
-            setSentinelEvents((prev) => [data.data, ...prev].slice(0, 100));
-          } else if (data.type === "discussion") {
-            setSentinelDiscussion((prev) => [data.data, ...prev].slice(0, 100));
-          } else if (data.type === "heal") {
+          const payload: unknown = JSON.parse(data);
+          if (typeof payload !== "object" || payload === null) return;
+          const message = payload as { type?: unknown; data?: unknown };
+          const item = message.data;
+          if (message.type === "event" && item && typeof item === "object") {
+            setSentinelEvents((prev) => [item as SentinelEvent, ...prev].slice(0, 100));
+          } else if (message.type === "discussion" && item && typeof item === "object") {
+            setSentinelDiscussion((prev) => [item as SentinelDiscussionEntry, ...prev].slice(0, 100));
+          } else if (message.type === "heal" && item && typeof item === "object") {
+            const healed = item as { id?: unknown; report?: unknown };
+            if (typeof healed.id !== "string") return;
             setSentinelEvents((prev) =>
-              prev.map((e) => (e.id === data.data.id ? { ...e, status: "auto_fixed", auto_fix_report: data.data.report } : e))
+              prev.map((e) =>
+                e.id === healed.id
+                  ? {
+                      ...e,
+                      status: "auto_fixed",
+                      auto_fix_report: typeof healed.report === "string" ? healed.report : e.auto_fix_report,
+                    }
+                  : e
+              )
             );
           }
         } catch {
           // ignore parse errors
         }
-      };
-    } catch {
-      setSentinelStreamConnected(false);
-    }
+      },
+    });
   }, []);
 
   const disconnectSentinelStream = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (unsubscribeStreamRef.current) {
+      unsubscribeStreamRef.current();
+      unsubscribeStreamRef.current = null;
       setSentinelStreamConnected(false);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === "sentinel") {
-      connectSentinelStream();
-    } else {
-      disconnectSentinelStream();
-    }
+    if (!isAdmin || activeTab !== "sentinel") return;
+    connectSentinelStream();
     return () => disconnectSentinelStream();
-  }, [activeTab, connectSentinelStream, disconnectSentinelStream]);
+  }, [isAdmin, activeTab, connectSentinelStream, disconnectSentinelStream]);
 
   async function handleToggleChange(name: string, enabled: boolean) {
-    setBusy(`toggle-${name}`);
+    const key = `toggle-${name}`;
+    startBusy(key);
     try {
       const state = await setToggle(name, enabled);
       setAppStateState(state);
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy(null);
+      stopBusy(key);
     }
   }
 
   async function handleStatusChange(status: "running" | "maintenance" | "shutdown") {
-    setBusy("status");
+    startBusy("status");
     try {
       const state = await setAppState({ status, message: "" });
       setAppStateState(state);
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy(null);
+      stopBusy("status");
     }
   }
 
   async function handleRunSentinel() {
-    setBusy("sentinel-run");
+    startBusy("sentinel-run");
     try {
       await runSentinel();
       await loadSentinel();
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy(null);
+      stopBusy("sentinel-run");
     }
   }
 
   async function handleSuspend(userId: string) {
-    const minutes = prompt("Suspend duration (minutes):", "60");
-    if (!minutes) return;
-    setBusy(`suspend-${userId}`);
+    const input = prompt("Suspend duration (minutes):", "60");
+    if (input === null) return;
+    const minutes = Number(input);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 525600) {
+      setError("Suspend duration must be a whole number between 1 and 525600 minutes.");
+      return;
+    }
+    const key = `suspend-${userId}`;
+    startBusy(key);
     try {
-      await suspendUser(userId, parseInt(minutes, 10));
+      await suspendUser(userId, minutes);
       await loadUsers();
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy(null);
+      stopBusy(key);
     }
   }
 
   async function handleReactivate(userId: string) {
     if (!confirm("Reactivate this user?")) return;
-    setBusy(`reactivate-${userId}`);
+    const key = `reactivate-${userId}`;
+    startBusy(key);
     try {
       await reactivateUser(userId);
       await loadUsers();
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setBusy(null);
+      stopBusy(key);
     }
   }
 
   async function handleAccountSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy("account");
+    startBusy("account");
     setAccountMsg(null);
     try {
-      const res = await updateAdminAccount(accountForm);
+      const payload: UpdateAccountRequest = {
+        email: accountForm.email.trim() || null,
+        new_password: accountForm.new_password || null,
+      };
+      const res = await updateAdminAccount(payload);
       setAccountMsg({ type: "success", text: res.message });
       setAccountForm({ email: "", new_password: "" });
     } catch (e) {
       setAccountMsg({ type: "error", text: (e as Error).message });
     } finally {
-      setBusy(null);
+      stopBusy("account");
     }
   }
 
@@ -315,7 +344,7 @@ export default function AdminPage() {
       {error && (
         <div className="bg-red-900/30 border border-red-700/50 text-red-300 rounded-lg p-3 text-sm flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">×</button>
+          <button onClick={() => setError(null)} aria-label="Dismiss error" className="text-red-400 hover:text-red-300">×</button>
         </div>
       )}
 
@@ -350,7 +379,9 @@ export default function AdminPage() {
                       <button
                         key={s}
                         onClick={() => handleStatusChange(s)}
-                        disabled={busy === "status"}
+                        aria-label={`Set status to ${s}`}
+                        aria-pressed={appState.status === s}
+                        disabled={busy.has("status")}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
                           appState.status === s ? getStatusColor(s) : "text-slate-400 border-slate-700/50 hover:border-slate-600"
                         } disabled:opacity-60`}
@@ -376,8 +407,11 @@ export default function AdminPage() {
                           </p>
                         </div>
                         <button
+                          role="switch"
+                          aria-checked={enabled}
+                          aria-label={`Toggle ${name.replaceAll("_", " ")}`}
                           onClick={() => handleToggleChange(name, !enabled)}
-                          disabled={busy === `toggle-${name}`}
+                          disabled={busy.has(`toggle-${name}`)}
                           className={`shrink-0 w-12 h-6 rounded-full flex items-center transition-colors ${
                             enabled
                               ? "bg-green-600 border-green-600"
@@ -405,10 +439,10 @@ export default function AdminPage() {
               </h2>
               <button
                 onClick={handleRunSentinel}
-                disabled={busy === "sentinel-run"}
+                disabled={busy.has("sentinel-run")}
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
               >
-                {busy === "sentinel-run" ? (
+                {busy.has("sentinel-run") ? (
                   <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Running...</span>
                 ) : (
                   <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Run Cycle</span>
@@ -447,7 +481,7 @@ export default function AdminPage() {
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Server className="w-5 h-5 text-blue-400" /> Provider Health & Usage
             </h2>
-            <button onClick={loadProviders} disabled={loading} className="px-3 py-2 text-sm bg-slate-800 hover:bg-slate-700 rounded-lg disabled:opacity-60">
+            <button onClick={loadProviders} aria-label="Refresh provider usage" disabled={loading} className="px-3 py-2 text-sm bg-slate-800 hover:bg-slate-700 rounded-lg disabled:opacity-60">
               <RefreshCw className={`w-4 h-4 inline ${loading ? "animate-spin" : ""}`} /> Refresh
             </button>
           </div>
@@ -599,7 +633,7 @@ export default function AdminPage() {
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-400" /> User Management
             </h2>
-            <button onClick={loadUsers} disabled={loading} className="px-3 py-2 text-sm bg-slate-800 hover:bg-slate-700 rounded-lg disabled:opacity-60">
+            <button onClick={loadUsers} aria-label="Refresh users" disabled={loading} className="px-3 py-2 text-sm bg-slate-800 hover:bg-slate-700 rounded-lg disabled:opacity-60">
               <RefreshCw className={`w-4 h-4 inline ${loading ? "animate-spin" : ""}`} /> Refresh
             </button>
           </div>
@@ -646,7 +680,7 @@ export default function AdminPage() {
                         {u.banned_until != null ? (
                           <button
                             onClick={() => handleReactivate(u.id)}
-                            disabled={busy === `reactivate-${u.id}`}
+                            disabled={busy.has(`reactivate-${u.id}`)}
                             className="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-500 rounded-lg text-white transition-colors disabled:opacity-60"
                           >
                             <Unlock className="w-3 h-3 inline mr-1" /> Reactivate
@@ -654,7 +688,7 @@ export default function AdminPage() {
                         ) : (
                           <button
                             onClick={() => handleSuspend(u.id)}
-                            disabled={busy === `suspend-${u.id}`}
+                            disabled={busy.has(`suspend-${u.id}`)}
                             className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-500 rounded-lg text-white transition-colors disabled:opacity-60"
                           >
                             <Ban className="w-3 h-3 inline mr-1" /> Suspend
@@ -690,7 +724,7 @@ export default function AdminPage() {
                 : "bg-red-900/30 border border-red-700/50 text-red-300"
             }`}>
               <span>{accountMsg.text}</span>
-              <button onClick={() => setAccountMsg(null)} className="text-slate-400 hover:text-slate-200">×</button>
+              <button onClick={() => setAccountMsg(null)} aria-label="Dismiss message" className="text-slate-400 hover:text-slate-200">×</button>
             </div>
           )}
           <form onSubmit={handleAccountSubmit} className="space-y-4">
@@ -718,10 +752,10 @@ export default function AdminPage() {
             </div>
             <button
               type="submit"
-              disabled={busy === "account"}
+              disabled={busy.has("account")}
               className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-medium transition-colors disabled:opacity-60"
             >
-              {busy === "account" ? (
+              {busy.has("account") ? (
                 <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span>
               ) : (
                 "Save Changes"
@@ -731,7 +765,7 @@ export default function AdminPage() {
         </section>
       )}
 
-      {busy && (
+      {busy.size > 0 && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 pointer-events-none">
           <Loader2 className="w-10 h-10 animate-spin text-red-400" />
         </div>

@@ -28,12 +28,15 @@ export function useAuthSession(): AuthState {
       };
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setSession(data.session);
-        setLoading(false);
-      }
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (mounted) {
+          setSession(data.session);
+          setLoading(false);
+        }
+      })
+      .catch(() => finish());
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, current) => {
       if (mounted) setSession(current);

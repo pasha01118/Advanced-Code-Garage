@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -7,14 +8,27 @@ const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/models/" +
   GEMINI_MODEL +
   ":generateContent";
+const MAX_PROMPT_LENGTH = 12000;
+
+function tokensEqual(a: string, b: string): boolean {
+  const aHash = createHash("sha256").update(a).digest();
+  const bHash = createHash("sha256").update(b).digest();
+  return timingSafeEqual(aHash, bHash);
+}
 
 export async function POST(request: Request) {
-  const proxyToken = process.env.GOOGLE_AI_PROXY_TOKEN;
-  if (!proxyToken) {
+  const proxyTokens = [
+    process.env.GOOGLE_AI_STUDIO_PROXY_TOKEN,
+    process.env.GOOGLE_AI_PROXY_TOKEN,
+  ].filter((token): token is string => Boolean(token));
+  if (proxyTokens.length === 0) {
     return NextResponse.json({ error: "proxy not configured" }, { status: 503 });
   }
+
   const auth = request.headers.get("authorization") ?? "";
-  if (auth !== `Bearer ${proxyToken}`) {
+  const providedToken = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length) : "";
+  const authorized = proxyTokens.map((token) => tokensEqual(providedToken, token)).some(Boolean);
+  if (!authorized) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -36,25 +50,28 @@ export async function POST(request: Request) {
   if (!prompt) {
     return NextResponse.json({ error: "empty prompt" }, { status: 400 });
   }
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    return NextResponse.json({ error: "prompt too long" }, { status: 400 });
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12000);
   try {
-    const res = await fetch(
-      `${GEMINI_ENDPOINT}?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 512 },
-        }),
-        signal: controller.signal,
+    const res = await fetch(GEMINI_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
       },
-    );
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 512 },
+      }),
+      signal: controller.signal,
+    });
     if (!res.ok) {
-      const detail = (await res.text()).slice(0, 300);
-      return NextResponse.json({ error: `gemini ${res.status}`, detail }, { status: 502 });
+      // Never reflect raw upstream bodies; they can contain secrets.
+      return NextResponse.json({ error: "gemini upstream error", status: res.status }, { status: 502 });
     }
     const data = (await res.json()) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -64,10 +81,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "empty completion" }, { status: 502 });
     }
     return NextResponse.json({ text });
-  } catch (err) {
-    const raw = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    const safe = apiKey ? raw.split(apiKey).join("***") : raw;
-    return NextResponse.json({ error: "gemini request failed", detail: safe.slice(0, 300) }, { status: 502 });
+  } catch {
+    return NextResponse.json({ error: "gemini request failed" }, { status: 502 });
   } finally {
     clearTimeout(timer);
   }

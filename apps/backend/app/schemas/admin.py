@@ -107,6 +107,7 @@ class UpdateAccountOut(BaseModel):
 class RunSentinelOut(BaseModel):
     events_added: int
     discussion_added: int
+    skipped: bool = False
 
 
 class SentinelEventListOut(BaseModel):

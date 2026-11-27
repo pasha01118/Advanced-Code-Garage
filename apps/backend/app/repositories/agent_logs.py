@@ -26,3 +26,24 @@ class AgentLogsRepository(SupabaseRepository):
             .execute
         )
         return res.data or []
+
+    async def for_projects(
+        self,
+        project_ids: list[str],
+        *,
+        limit: int = 100,
+        level: str | None = None,
+        search: str | None = None,
+    ) -> list[dict]:
+        """Owner-scoped history: callers pass only project IDs they own."""
+        if not project_ids:
+            return []
+        query = self.db.table("agent_logs").select("*").in_("project_id", project_ids)
+        if level:
+            query = query.eq("level", level)
+        if search:
+            query = query.ilike("message", f"%{search}%")
+        res = await self._run(
+            query.order("timestamp", desc=True).limit(limit).execute
+        )
+        return res.data or []

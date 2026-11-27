@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend — Advanced Code Garage
 
-## Getting Started
+Next.js 16 App Router + React 19 + TypeScript + Tailwind CSS dashboard, deployed on Vercel.
 
-First, run the development server:
+## Local development
+
+Run from the repository root (pnpm 12.6.0 workspace):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+corepack enable && corepack prepare pnpm@12.6.0 --activate
+pnpm install
+# apps/frontend/.env.local:
+#   NEXT_PUBLIC_SUPABASE_URL=...
+#   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+#   NEXT_PUBLIC_API_URL=http://localhost:8000   # omit on Vercel (vercel.json rewrites /api)
+pnpm --filter frontend dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Useful checks: `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build` (from `apps/frontend`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Backend API and live streams
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`vercel.json` rewrites `/api/:path*` to the Render-hosted FastAPI backend; there is intentionally no
+second rewrite in `next.config.ts`. Both live streams (terminal logs and the admin Sentinel feed) use
+authenticated SSE consumed by a fetch-based client — not WebSockets or WebRTC.
 
-## Learn More
+## Account menu
 
-To learn more about Next.js, take a look at the following resources:
+The header avatar menu is available on desktop and mobile. **Log Out** ends the Supabase session and
+returns to the login screen. **Switch Profile** signs out and opens the login screen with a
+"switch profile" notice, returning to the page you were on after signing in as the other account.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contract
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`pnpm gen:api` regenerates `../../packages/contract/generated/api.ts` from
+`../../packages/contract/openapi.json`. CI checks both the committed spec against the live FastAPI
+schema and the generated TypeScript against the spec.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See the [Next.js documentation](https://nextjs.org/docs) for framework details.

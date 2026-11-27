@@ -6,6 +6,7 @@ from app.repositories.agent_logs import AgentLogsRepository
 from app.repositories.ai_keys import AIKeysRepository
 from app.services.ai_catalog import list_catalog
 from app.services.ai_integration import SessionModelCache
+from app.services.notifications import NotificationService
 from app.services.ops_state import OpsStateService
 
 sentinel_bus = EventBus()
@@ -34,11 +35,13 @@ class SentinelService:
         ai_keys: AIKeysRepository | None = None,
         logs: AgentLogsRepository | None = None,
         bus: EventBus | None = None,
+        notifications: NotificationService | None = None,
     ) -> None:
         self.repo = repo or AdminRepository()
         self.ops = ops or OpsStateService()
         self.ai_keys = ai_keys or AIKeysRepository()
         self.logs = logs or AgentLogsRepository()
+        self.notifications = notifications
         self.bus = bus or sentinel_bus
         self.running = False
         self.last_run_at: datetime | None = None
@@ -48,6 +51,10 @@ class SentinelService:
         return {e["title"] for e in events if e.get("status") == "open"}
 
     async def run_cycle(self) -> dict:
+        if self.running:
+            # Manual runs and the background loop share this instance; never
+            # allow two cycles to insert duplicate findings/discussion rows.
+            return {"events_added": 0, "discussion_added": 0, "skipped": True}
         self.running = True
         self.last_run_at = datetime.now(timezone.utc)
         try:
@@ -64,9 +71,14 @@ class SentinelService:
                 except Exception:
                     continue
                 await self.bus.publish({"type": "event", "data": event})
+                if self.notifications:
+                    await self.notifications.from_sentinel_event(
+                        event.get("owner_id"), event
+                    )
 
             healed = await self._heal(state)
-            discussion = self._compose_discussion(findings, healed, state)
+            # Quiet cycles used to append 2-4 rows every 60 seconds forever.
+            discussion = self._compose_discussion(findings, healed, state) if findings or healed else []
             for agent, message in discussion:
                 row = await self.repo.append_discussion(agent=agent, message=message)
                 if row:
@@ -78,6 +90,9 @@ class SentinelService:
     async def _scan_providers(self) -> list[dict]:
         catalog_ids = {p["id"] for p in list_catalog()}
         aggregates = {a["provider"]: a for a in await self.ai_keys.aggregate_providers()}
+        failing_by_provider: dict[str, list[dict]] = {}
+        for row in await self.ai_keys.list_failing():
+            failing_by_provider.setdefault(row["provider"], []).append(row)
         findings: list[dict] = []
         for provider in sorted(catalog_ids):
             agg = aggregates.get(provider) or {
@@ -101,18 +116,40 @@ class SentinelService:
                 balance_available=None,
             )
             if status_label in ("error", "quota"):
-                findings.append(
-                    {
-                        "severity": "error" if status_label == "error" else "warn",
-                        "scope": "provider",
-                        "agent": "Sentinel-Scan",
-                        "title": f"Provider {provider} needs attention",
-                        "message": f"{provider}: {message}",
-                        "status": "open",
-                        "suggested_fix": PROVIDER_SUGGESTIONS[status_label],
-                        "auto_fix_report": "",
-                    }
-                )
+                suggestion = PROVIDER_SUGGESTIONS[status_label]
+                failing = failing_by_provider.get(provider) or []
+                if failing:
+                    # Per-owner findings carry the metadata needed for a scoped
+                    # cache flush instead of a global, cross-user wipe.
+                    for row in failing:
+                        owner = row.get("owner_id")
+                        findings.append(
+                            {
+                                "severity": "error" if status_label == "error" else "warn",
+                                "scope": "provider",
+                                "agent": "Sentinel-Scan",
+                                "title": f"Provider {provider} needs attention ({owner})",
+                                "message": f"{provider}: {message}",
+                                "status": "open",
+                                "suggested_fix": f"flush_cache: {suggestion}",
+                                "auto_fix_report": "",
+                                "owner_id": owner,
+                                "provider": provider,
+                            }
+                        )
+                else:
+                    findings.append(
+                        {
+                            "severity": "error" if status_label == "error" else "warn",
+                            "scope": "provider",
+                            "agent": "Sentinel-Scan",
+                            "title": f"Provider {provider} needs attention",
+                            "message": f"{provider}: {message}",
+                            "status": "open",
+                            "suggested_fix": suggestion,
+                            "auto_fix_report": "",
+                        }
+                    )
         return findings
 
     async def _scan_logs(self) -> list[dict]:
@@ -129,7 +166,9 @@ class SentinelService:
                 "title": f"{len(errors)} error(s) in recent agent logs",
                 "message": f"Latest samples: {samples}",
                 "status": "open",
-                "suggested_fix": "flush_cache",
+                # Never wipe every user's cached models because of one system
+                # log error: the log entry does not identify an owner.
+                "suggested_fix": "review_logs",
                 "auto_fix_report": "",
             }
         ]
@@ -142,11 +181,30 @@ class SentinelService:
                 continue
             fix = event.get("suggested_fix") or ""
             report = ""
-            if fix == "flush_cache":
-                SessionModelCache.clear()
-                report = "Sentinel flushed the stale model cache (safe auto-fix)."
-            if report:
-                await self.repo.mark_event(event["id"], status="auto_fixed", report=report)
+            status = "auto_fixed"
+            if fix.split(":", 1)[0].strip() == "flush_cache":
+                owner = event.get("owner_id")
+                provider = event.get("provider")
+                if not owner:
+                    # A global flush would hurt unrelated users; leave the event
+                    # open for an admin instead of pretending it was healed.
+                    continue
+                if provider:
+                    SessionModelCache.pop(f"{owner}:{provider}")
+                    report = f"Sentinel flushed the stale model cache for {owner}/{provider}."
+                else:
+                    for catalog_entry in list_catalog():
+                        SessionModelCache.pop(f"{owner}:{catalog_entry['id']}")
+                    report = f"Sentinel flushed the stale model cache for {owner}."
+            elif fix == "review_logs":
+                # Reviewing is not a self-heal: close it as resolved, and do not
+                # report it as an executed fix in the discussion thread.
+                status = "resolved"
+                report = "Recent agent-log errors reviewed; no global cache flush applied."
+            else:
+                continue
+            await self.repo.mark_event(event["id"], status=status, report=report)
+            if status == "auto_fixed":
                 healed.append({"id": event["id"], "title": event["title"], "report": report})
                 await self.bus.publish(
                     {"type": "heal", "data": {"id": event["id"], "title": event["title"], "report": report}}

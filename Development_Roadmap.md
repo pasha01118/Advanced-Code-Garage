@@ -30,22 +30,24 @@
 ## Phase 5: Deployment Pipeline & External Integrations
 - [ ] Integrate drivers for Cloudflare, Vercel, and Docker.
 - [ ] Build webhook listeners for build logs and self-healing.
-- [ ] Develop Telegram/Discord bot gateways.
+- [ ] Develop Telegram/Discord bot gateways (ChatOps / voice are future work).
 
 ## Phase 6: Frontend Dashboard & Admin Control
-- [x] Build Agent Playground UI and real-time terminal (SSE).
+- [x] Build Agent Playground UI and real-time terminal (authenticated SSE, fetch-based client).
 - [x] Implement 3 Execution Mode toggles (Autonomous, AI-Man, Manual) — persisted in Supabase.
-- [x] Develop Secret Admin Control Panel (RBAC, kill switches).
+- [x] Develop Secret Admin Control Panel (RBAC; `swarm`, `ai_routing`, `telemetry`, `sentinel` and
+      `signups` kill switches are enforced at the route level; `git_ops`/`deployments` are stored).
 - [x] Build AI Integration dashboard (11-provider catalog, connect keys, live model lists,
       LED connectivity status, Ollama modal).
 - [x] Build full Admin Panel: operational state (running/maintenance/shutdown), feature toggles,
-      provider usage metrics, Sentinel telemetry (events/discussion/live SSE), user management
+      `provider_metrics`, Sentinel telemetry (`sentinel_events` / `sentinel_discussion` / live SSE), user management
       (suspend/reactivate), and admin account settings.
 - [x] Add global maintenance/shutdown banner + RBAC nav enforcement for non-admins.
+      First admin sign-up requires `APP_BOOTSTRAP_TOKEN`; reset token is `ADMIN_RESET_TOKEN`.
 
 ## Phase 7: Hardening, Resilience & Testing
-- [x] Implement self-healing Sentinel service (provider + error-log scan, auto flush-cache heal,
-      AI-engineer discussion, background loop on FastAPI lifespan).
+- [x] Implement Sentinel monitor (provider + error-log scan, auto flush-cache heal, AI-engineer
+      discussion, background loop on FastAPI lifespan). AST auto-fix / CI-webhook triggering is future work.
 - [ ] Implement `offline_cache.py` for WAN resilience.
 - [ ] Execute `test_benchmarks.py` for performance validation.
 - [ ] Conduct end-to-end penetration testing.

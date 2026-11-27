@@ -1,11 +1,12 @@
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from fastapi.security import HTTPAuthorizationCredentials
 
-from app.core.auth import require_admin
+from app.core.auth import _is_admin, require_admin, require_authenticated, require_user
 from app.core.config import get_settings
 from app.repositories.admin_repo import AdminRepository
 from app.schemas.admin import (
@@ -18,7 +19,6 @@ from app.schemas.admin import (
     SentinelSnapshotOut,
     SetAppStateRequest,
     SetToggleRequest,
-    SetUserRequest,
     SuspendUserRequest,
     UpdateAccountOut,
     UpdateAccountRequest,
@@ -27,8 +27,9 @@ from app.schemas.admin import (
 )
 from app.services.admin_users import AdminUsersService
 from app.services.ai_catalog import list_catalog
-from app.services.ops_state import OpsStateService
+from app.services.ops_state import OpsStateService, require_service
 from app.services.sentinel import PROVIDER_SUGGESTIONS, SentinelService
+from app.services.sentinel_runtime import get_sentinel_service as shared_sentinel_service
 
 router = APIRouter()
 
@@ -40,7 +41,9 @@ def get_ops_service() -> OpsStateService:
 
 
 def get_sentinel_service() -> SentinelService:
-    return SentinelService()
+    # One instance is shared with the background loop so snapshots and manual
+    # runs observe (and guard against) the real cycle state.
+    return shared_sentinel_service()
 
 
 def get_admin_users_service() -> AdminUsersService:
@@ -52,7 +55,10 @@ def get_admin_repo() -> AdminRepository:
 
 
 @router.get("/state", response_model=AppStateOut)
-async def get_state(ops: OpsStateService = Depends(get_ops_service)) -> AppStateOut:
+async def get_state(
+    user: Annotated[dict, Depends(require_authenticated)],
+    ops: OpsStateService = Depends(get_ops_service),
+) -> AppStateOut:
     """Operational state visible to any signed-in user (powers the banner)."""
     return AppStateOut(**await ops.get_state())
 
@@ -106,19 +112,31 @@ async def provider_usage(
     return ProviderUsageListOut(providers=out)
 
 
-@router.get("/sentinel/events", response_model=list[SentinelEventOut])
+@router.get(
+    "/sentinel/events",
+    response_model=list[SentinelEventOut],
+    dependencies=[Depends(require_service("sentinel"))],
+)
 async def sentinel_events(user: AdminUser, repo: AdminRepository = Depends(get_admin_repo)) -> list[SentinelEventOut]:
     events = await repo.list_events(limit=200)
     return [SentinelEventOut(**e) for e in events]
 
 
-@router.get("/sentinel/discussion", response_model=list[SentinelDiscussionEntryOut])
+@router.get(
+    "/sentinel/discussion",
+    response_model=list[SentinelDiscussionEntryOut],
+    dependencies=[Depends(require_service("sentinel"))],
+)
 async def sentinel_discussion(user: AdminUser, repo: AdminRepository = Depends(get_admin_repo)) -> list[SentinelDiscussionEntryOut]:
     discussion = await repo.list_discussion(limit=200)
     return [SentinelDiscussionEntryOut(**d) for d in discussion]
 
 
-@router.get("/sentinel/snapshot", response_model=SentinelSnapshotOut)
+@router.get(
+    "/sentinel/snapshot",
+    response_model=SentinelSnapshotOut,
+    dependencies=[Depends(require_service("sentinel"))],
+)
 async def sentinel_snapshot(
     user: AdminUser,
     service: SentinelService = Depends(get_sentinel_service),
@@ -134,7 +152,11 @@ async def sentinel_snapshot(
     )
 
 
-@router.post("/sentinel/run", response_model=RunSentinelOut)
+@router.post(
+    "/sentinel/run",
+    response_model=RunSentinelOut,
+    dependencies=[Depends(require_service("sentinel"))],
+)
 async def run_sentinel(
     user: AdminUser,
     service: SentinelService = Depends(get_sentinel_service),
@@ -143,29 +165,92 @@ async def run_sentinel(
     return RunSentinelOut(**result)
 
 
-async def _sentinel_stream(service: SentinelService):
+def _is_banned(banned_until: object) -> bool:
+    if not banned_until:
+        return False
+    try:
+        until = datetime.fromisoformat(str(banned_until).replace("Z", "+00:00"))
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+        return until > datetime.now(timezone.utc)
+    except (TypeError, ValueError):
+        # Malformed Supabase data must not keep an admin stream alive.
+        return True
+
+
+async def _still_admin(
+    token: str | None,
+    user: dict,
+    users: AdminUsersService,
+    ops: OpsStateService,
+) -> bool:
+    """Re-check auth, admin status and the feature gate on long-lived streams."""
+    try:
+        await ops.ensure_available("sentinel")
+        current = (
+            await require_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials=token))
+            if token
+            else user
+        )
+        sub = current.get("sub")
+        if not sub:
+            return False
+        # Re-read the user from Supabase: the JWT's app_metadata is a snapshot
+        # from sign-in and cannot reflect a later role change or suspension.
+        fresh = await users.get_user(sub) if hasattr(users, "get_user") else current
+        if _is_banned(fresh.get("banned_until")):
+            return False
+        metadata = fresh.get("app_metadata") or current.get("app_metadata") or {}
+        return _is_admin({**current, "app_metadata": metadata})
+    except Exception:
+        return False
+
+
+async def _sentinel_stream(
+    service: SentinelService,
+    token: str | None,
+    user: dict,
+    users: AdminUsersService,
+    ops: OpsStateService,
+):
     import asyncio
     import json
     queue = await service.bus.subscribe()
+    last_check = 0.0
     try:
         while True:
+            event = None
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=15.0)
             except asyncio.TimeoutError:
+                pass
+            # Re-check at most every 15s: streams can be bursty, but Supabase
+            # lookups must not scale with event volume.
+            now = time.monotonic()
+            if event is None or now - last_check >= 15.0:
+                if not await _still_admin(token, user, users, ops):
+                    break
+                last_check = now
+            if event is None:
                 yield ": keepalive\n\n"
-                continue
-            yield f"data: {json.dumps(event)}\n\n"
+            else:
+                yield f"data: {json.dumps(event)}\n\n"
     finally:
         await service.bus.unsubscribe(queue)
 
 
-@router.get("/sentinel/stream")
+@router.get("/sentinel/stream", dependencies=[Depends(require_service("sentinel"))])
 async def sentinel_stream(
+    request: Request,
     user: AdminUser,
     service: SentinelService = Depends(get_sentinel_service),
+    users: AdminUsersService = Depends(get_admin_users_service),
+    ops: OpsStateService = Depends(get_ops_service),
 ) -> StreamingResponse:
+    header = request.headers.get("authorization", "")
+    token = header[7:].strip() if header.lower().startswith("bearer ") else None
     return StreamingResponse(
-        _sentinel_stream(service),
+        _sentinel_stream(service, token, user, users, ops),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
     )
