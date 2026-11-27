@@ -14,6 +14,7 @@ import {
   Activity,
   Settings2,
   ScrollText,
+  Server,
 } from "lucide-react";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationCenter } from "@/components/notifications-center";
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { href: "/projects", label: "Projects", icon: FolderGit2 },
   { href: "/ai-integration", label: "AI Integration", icon: Sparkles },
   { href: "/metrics", label: "Metrics", icon: Activity },
+  { href: "/backend", label: "Backend", icon: Server },
   { href: "/preferences", label: "Preferences", icon: Settings2 },
   { href: "/audit", label: "Audit Log", icon: ScrollText, admin: true },
   { href: "/admin", label: "Control Panel", icon: ShieldCheck, admin: true },
