@@ -56,7 +56,11 @@ class TerminalService:
         return row
 
     async def list_history(self, owner_id: str, limit: int = 100) -> list[dict]:
-        return await self.history.list(owner_id, limit)
+        rows = await self.history.list(owner_id, limit)
+        return [
+            {**row, "id": str(row["id"])} if row.get("id") is not None else row
+            for row in rows
+        ]
 
     async def clear_history(self, owner_id: str) -> int:
         return await self.history.clear(owner_id)

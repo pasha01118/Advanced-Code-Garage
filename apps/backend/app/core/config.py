@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     sentinel_interval_seconds: int = Field(default=60, ge=1)
     # Max auth-sensitive requests per IP per minute (in-process best effort).
     auth_rate_limit_per_minute: int = Field(default=10, ge=1)
+    # Only these socket peers may supply X-Forwarded-For (e.g. Render's proxies).
+    trusted_proxy_cidrs: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
 

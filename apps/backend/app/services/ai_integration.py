@@ -13,12 +13,15 @@ Loose "session cache": model lists are held in-process for our instance and
 refreshed on demand within 10 minutes.
 """
 
+import asyncio
 import ipaddress
 import json
 import logging
 import socket
 import time
-from urllib.parse import urlparse
+from dataclasses import dataclass
+from typing import Any
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 
@@ -31,6 +34,7 @@ from app.services.ai_catalog import get_catalog_entry
 logger = logging.getLogger(__name__)
 
 VALIDATION_TIMEOUT_SECONDS = 20.0
+DNS_LOOKUP_TIMEOUT_SECONDS = 5.0
 VALID_KEYS_FIELD = "key_ciphertext"
 
 _TAG_MARKERS = (
@@ -48,11 +52,36 @@ def _redact(text: str, secret: str | None) -> str:
     return text
 
 
-def _safe_ollama_url(url: str) -> str:
-    """Reject server-side request forgery in user-supplied Ollama URLs.
+@dataclass(frozen=True)
+class OllamaTarget:
+    """A validated Ollama base URL plus the exact address to connect to."""
 
-    Literal private/loopback/link-local IPs are never allowed. `localhost` is
-    allowed only outside production for local development.
+    original_url: str
+    request_url: str
+    headers: dict[str, str]
+    extensions: dict[str, Any]
+
+
+async def _resolve_host(host: str, port: int) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    """Resolve on the event loop with a deadline so the worker cannot stall."""
+    infos = await asyncio.wait_for(
+        asyncio.get_running_loop().getaddrinfo(host, port, type=socket.SOCK_STREAM),
+        timeout=DNS_LOOKUP_TIMEOUT_SECONDS,
+    )
+    return [ipaddress.ip_address(info[4][0]) for info in infos]
+
+
+def _host_header(host: str, port: int | None) -> str:
+    rendered = f"[{host}]" if ":" in host else host
+    return f"{rendered}:{port}" if port else rendered
+
+
+async def _safe_ollama_url(url: str) -> OllamaTarget:
+    """Validate a user-supplied Ollama URL and pin the connection to the answer.
+
+    The outbound request uses the validated IP literal, while the original
+    hostname is preserved in the Host header and TLS SNI/certificate check.
+    This prevents DNS rebinding between validation and connection.
     """
     parsed = urlparse(url)
     host = parsed.hostname
@@ -66,29 +95,44 @@ def _safe_ollama_url(url: str) -> str:
         or parsed.fragment
     ):
         raise ValueError("Invalid Ollama base URL; use http(s)://host[:port]")
+
     lowered = host.lower()
-    if lowered == "localhost" or lowered.endswith(".localhost"):
-        if get_settings().is_production:
-            raise ValueError("Loopback Ollama URLs are not allowed in production")
-        return url.rstrip("/")
+    local_dev = lowered == "localhost" or lowered.endswith(".localhost")
+    if local_dev and get_settings().is_production:
+        raise ValueError("Loopback Ollama URLs are not allowed in production")
+
     try:
-        address = ipaddress.ip_address(host)
+        literal = ipaddress.ip_address(host)
     except ValueError:
-        # Resolve before connecting: a hostname pointing at loopback, RFC1918,
-        # link-local or metadata addresses is just as dangerous as a literal IP.
-        # (A fully rebinding-safe solution needs egress-level DNS pinning.)
+        literal = None
+
+    if literal is not None:
+        if not literal.is_global and not local_dev:
+            raise ValueError("Private or reserved Ollama URLs are not allowed")
+        resolved = [literal]
+    else:
         port = parsed.port or (443 if parsed.scheme == "https" else 80)
         try:
-            infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-            resolved = [ipaddress.ip_address(info[4][0]) for info in infos]
-        except (OSError, ValueError) as exc:
+            resolved = await _resolve_host(host, port)
+        except (asyncio.TimeoutError, OSError, ValueError) as exc:
             raise ValueError("Ollama hostname could not be resolved") from exc
-        if not resolved or any(not ip.is_global for ip in resolved):
+        if not resolved:
+            raise ValueError("Ollama hostname could not be resolved")
+        if not local_dev and any(not ip.is_global for ip in resolved):
             raise ValueError("Ollama hostname resolves to a private or reserved address")
-        return url.rstrip("/")
-    if not address.is_global:
-        raise ValueError("Private or reserved Ollama URLs are not allowed")
-    return url.rstrip("/")
+        literal = resolved[0]
+
+    pinned = str(literal)
+    if literal.version == 6:
+        pinned = f"[{pinned}]"
+    netloc = pinned + (f":{parsed.port}" if parsed.port else "")
+    request_url = urlunparse((parsed.scheme, netloc, "", "", "", ""))
+    return OllamaTarget(
+        original_url=url.rstrip("/"),
+        request_url=request_url,
+        headers={"Host": _host_header(host, parsed.port)},
+        extensions={"sni_hostname": host} if parsed.scheme == "https" else {},
+    )
 
 
 def _model_tags(model_id: str) -> list[str] | None:
@@ -144,14 +188,13 @@ class AIIntegrationService:
 
     @staticmethod
     def _endpoint(entry, api_key: str | None, base_url: str | None):
-        if entry.kind == "ollama":
-            return f"{_safe_ollama_url(base_url or '')}/api/tags", {}, None
         if entry.kind == "google":
-            return f"{entry.base_url}/models", {}, {"key": api_key}
+            return f"{entry.base_url}/models", {}, {"key": api_key}, {}
         return (
             f"{base_url.rstrip('/')}/{entry.models_path.lstrip('/')}",
             {"Authorization": f"Bearer {api_key}"},
             None,
+            {},
         )
 
     @staticmethod
@@ -232,11 +275,25 @@ class AIIntegrationService:
         models.sort(key=lambda x: x["id"].lower())
         return models
 
-    async def _run_validation(self, entry, api_key: str | None, base_url: str | None) -> AIValidateOut:
-        url, headers, params = self._endpoint(entry, api_key, base_url)
+    async def _run_validation(
+        self,
+        entry,
+        api_key: str | None,
+        base_url: str | None,
+        target: OllamaTarget | None = None,
+    ) -> AIValidateOut:
+        if entry.kind == "ollama":
+            if target is None:
+                target = await _safe_ollama_url(base_url or "")
+            url = f"{target.request_url}/api/tags"
+            headers = dict(target.headers)
+            params = None
+            extensions = dict(target.extensions)
+        else:
+            url, headers, params, extensions = self._endpoint(entry, api_key, base_url)
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(VALIDATION_TIMEOUT_SECONDS)) as client:
-                res = await client.get(url, headers=headers, params=params)
+                res = await client.get(url, headers=headers, params=params, extensions=extensions)
                 body = res.text
         except httpx.TimeoutException:
             logger.warning("ai validation %s: timeout", entry.id)
@@ -333,8 +390,12 @@ class AIIntegrationService:
 
         key = api_key.strip() if api_key else ""
         url = ollama_base_url.strip() if ollama_base_url else None
+        target: OllamaTarget | None = None
         if provider == "ollama" and url:
-            url = _safe_ollama_url(url)
+            # Validate before persisting, and reuse the pinned target below so
+            # the connection uses the exact address that passed validation.
+            target = await _safe_ollama_url(url)
+            url = target.original_url
 
         await self.repo.upsert(
             owner_id,
@@ -345,7 +406,9 @@ class AIIntegrationService:
             message="Validating...",
         )
 
-        result = await self._run_validation(entry, key if entry.requires_key else None, url or entry.base_url)
+        result = await self._run_validation(
+            entry, key if entry.requires_key else None, url or entry.base_url, target=target
+        )
         await self._persist_validation(owner_id, provider, result)
         return result
 
@@ -362,10 +425,9 @@ class AIIntegrationService:
 
         key = decrypt_secret(row.get(VALID_KEYS_FIELD)) if entry.requires_key else None
         url = row.get("ollama_base_url") or entry.base_url
-        if entry.kind == "ollama":
-            url = _safe_ollama_url(url)
+        target = await _safe_ollama_url(url) if entry.kind == "ollama" else None
 
-        result = await self._run_validation(entry, key, url)
+        result = await self._run_validation(entry, key, url, target=target)
         await self._persist_validation(owner_id, provider, result)
         return result
 
@@ -385,10 +447,9 @@ class AIIntegrationService:
 
         key = decrypt_secret(row.get(VALID_KEYS_FIELD)) if entry.requires_key else None
         url = row.get("ollama_base_url") or entry.base_url
-        if entry.kind == "ollama":
-            url = _safe_ollama_url(url)
+        target = await _safe_ollama_url(url) if entry.kind == "ollama" else None
 
-        result = await self._run_validation(entry, key, url)
+        result = await self._run_validation(entry, key, url, target=target)
         await self._persist_validation(owner_id, provider, result)
         return AIModelListOut(provider=provider, cached=False, models=[m.model_dump() for m in result.models])
 

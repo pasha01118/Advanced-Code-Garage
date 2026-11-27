@@ -71,6 +71,14 @@ def test_command_history(client):
     assert client.get("/api/v1/terminal/history").json()["entries"] == []
 
 
+def test_command_history_normalizes_string_id(client, fakes):
+    asyncio.run(fakes["history"].add("test-user", "id check"))
+    fakes["history"].rows[0]["id"] = 42
+    res = client.get("/api/v1/terminal/history")
+    assert res.status_code == 200
+    assert res.json()["entries"][0]["id"] == "42"
+
+
 def test_log_history_filtering(client, fakes):
     project = asyncio.run(fakes["projects"].create("Logged", owner_id="test-user"))
     asyncio.run(fakes["logs"].add("INFO", "agent-one", "alpha completed", project["id"]))

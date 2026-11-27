@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 import httpx
@@ -10,23 +11,37 @@ from app.core.config import get_settings
 _bearer = HTTPBearer(auto_error=False)
 _jwks_cache: dict | None = None
 _jwks_at: float = 0.0
+_jwks_refresh_at: float = 0.0
+_jwks_refresh_lock = asyncio.Lock()
 JWKS_TTL_SECONDS = 3600.0
+# Cooldown for forced refreshes triggered by an unknown `kid`. It bounds how
+# often unknown keys can hit the JWKS endpoint and coalesces concurrent calls.
+JWKS_REFRESH_COOLDOWN_SECONDS = 30.0
 ALGORITHMS = ["ES256", "RS256"]
 
 
 async def _get_jwks(*, force: bool = False) -> dict:
-    global _jwks_cache, _jwks_at
-    now = time.time()
-    if not force and _jwks_cache is not None and (now - _jwks_at) < JWKS_TTL_SECONDS:
+    global _jwks_cache, _jwks_at, _jwks_refresh_at
+    async with _jwks_refresh_lock:
+        now = time.monotonic()
+        if not force and _jwks_cache is not None and (now - _jwks_at) < JWKS_TTL_SECONDS:
+            return _jwks_cache
+        if force and now < _jwks_refresh_at and _jwks_cache is not None:
+            # Another request already refreshed during this cooldown.
+            return _jwks_cache
+        settings = get_settings()
+        url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, timeout=10.0)
+                response.raise_for_status()
+                _jwks_cache = response.json()
+                _jwks_at = time.monotonic()
+        finally:
+            # Even a failed refresh gets a cooldown so bad keys cannot hammer
+            # the identity provider; genuine rotation retries after the window.
+            _jwks_refresh_at = time.monotonic() + JWKS_REFRESH_COOLDOWN_SECONDS
         return _jwks_cache
-    settings = get_settings()
-    url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, timeout=10.0)
-        response.raise_for_status()
-        _jwks_cache = response.json()
-        _jwks_at = now
-    return _jwks_cache
 
 
 def _decode(token: str, jwks: dict) -> dict:
@@ -60,6 +75,8 @@ async def require_user(
         if "Unknown signing key" not in str(exc):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token") from exc
         try:
+            if time.monotonic() < _jwks_refresh_at:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
             refreshed = await _get_jwks(force=True)
             return _decode(credentials.credentials, refreshed)
         except Exception as refresh_exc:

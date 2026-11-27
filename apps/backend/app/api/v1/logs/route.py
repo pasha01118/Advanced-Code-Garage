@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -12,6 +13,7 @@ from app.core.event_bus import bus
 router = APIRouter()
 
 HEARTBEAT_SECONDS = 15.0
+TOKEN_RECHECK_SECONDS = 60.0
 
 AuthenticatedUser = Annotated[dict, Depends(require_authenticated)]
 
@@ -29,15 +31,26 @@ async def _token_still_valid(token: str | None) -> bool:
 
 async def log_stream(owner_id: str, token: str | None = None):
     queue = await bus.subscribe()
+    next_token_check = time.monotonic() + TOKEN_RECHECK_SECONDS
     try:
         while True:
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)
             except asyncio.TimeoutError:
-                if not await _token_still_valid(token):
-                    break
+                now = time.monotonic()
+                if now >= next_token_check:
+                    if not await _token_still_valid(token):
+                        break
+                    next_token_check = now + TOKEN_RECHECK_SECONDS
                 yield ": keepalive\n\n"
                 continue
+
+            now = time.monotonic()
+            if now >= next_token_check:
+                if not await _token_still_valid(token):
+                    break
+                next_token_check = now + TOKEN_RECHECK_SECONDS
+
             # The bus is process-global; never expose another user's project logs.
             if event.get("owner_id") != owner_id:
                 continue

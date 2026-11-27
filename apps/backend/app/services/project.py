@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -19,6 +20,8 @@ STAGES = [
     (75, 90, "Mr. Sadath Ali Khan", "Security Audit", "WARN", "Zero-tolerance scan in progress."),
     (90, 100, "Git-Sir", "Delivery", "OK", "Security gate passed. Project delivered."),
 ]
+
+logger = logging.getLogger(__name__)
 
 STAGE_DELAY_SECONDS = 0.8
 PROJECT_STATUSES = {"queued", "analyzing", "delivered", "failed"}
@@ -225,7 +228,16 @@ class ProjectService:
                 current_task=None,
             )
             if self.notifications:
-                await self.notifications.project_delivered(owner, project_id, name)
+                try:
+                    await self.notifications.project_delivered(owner, project_id, name)
+                except Exception as exc:
+                    # Delivery already succeeded: a notification failure must not
+                    # flip the project to `failed` or publish a pipeline error.
+                    logger.warning(
+                        "project %s delivered but notification failed: %s",
+                        project_id,
+                        type(exc).__name__,
+                    )
         except asyncio.CancelledError:
             await self.projects.update(
                 project_id,
