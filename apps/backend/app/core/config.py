@@ -40,8 +40,12 @@ class Settings(BaseSettings):
     admin_user_ids: str = ""
     # Token that unlocks the admin "forgot password" reset (no email possible).
     admin_reset_token: str = ""
-    # Seconds between Sentinel self-healing cycles.
-    sentinel_interval_seconds: int = 60
+    # Seconds between Sentinel self-healing cycles. Never allow a busy loop.
+    sentinel_interval_seconds: int = Field(default=60, ge=1)
+    # Max auth-sensitive requests per IP per minute (in-process best effort).
+    auth_rate_limit_per_minute: int = Field(default=10, ge=1)
+    # Only these socket peers may supply X-Forwarded-For (e.g. Render's proxies).
+    trusted_proxy_cidrs: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
 
@@ -51,7 +55,9 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
 
     frontend_urls: str = ""
-    frontend_origin_regex: str = r"https://[a-zA-Z0-9-]+\.vercel\.app"
+    # Anchored: Starlette uses re.match, so without `$` an attacker domain like
+    # https://preview.vercel.app.evil.tld would be trusted with credentials.
+    frontend_origin_regex: str = r"^https://[a-zA-Z0-9-]+\.vercel\.app$"
 
     environment: str = "development"
 

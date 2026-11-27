@@ -35,7 +35,8 @@ class AdminRepository(SupabaseRepository):
                 "status": "running",
                 "message": "",
                 "toggles": dict(DEFAULT_TOGGLES),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                # Signals "no persisted row yet" to conditional writers.
+                "updated_at": None,
             }
         toggles = {**DEFAULT_TOGGLES, **(row.get("toggles") or {})}
         row["toggles"] = toggles
@@ -48,27 +49,46 @@ class AdminRepository(SupabaseRepository):
             "message": message,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
-        res = await self._run(
-            self.db.table(STATE_TABLENAME).update(payload).eq("id", 1).execute
+        # Upsert: an environment without the seeded row must not silently
+        # discard an admin's state change.
+        await self._run(
+            self.db.table(STATE_TABLENAME)
+            .upsert({"id": 1, **payload}, on_conflict="id")
+            .execute
         )
-        row = self._row(res)
-        return await self.get_state() if row is None else self._normalise(row)
+        return await self.get_state()
 
     async def set_toggle(self, name: str, enabled: bool) -> dict:
-        current = await self.get_state()
-        toggles = dict(current["toggles"])
-        toggles[name] = enabled
-        payload = {
-            "toggles": toggles,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }
-        res = await self._run(
-            self.db.table(STATE_TABLENAME).update(payload).eq("id", 1).execute
-        )
-        row = self._row(res)
-        state = await self.get_state() if row is None else self._normalise(row)
-        state["toggles"] = {**current["toggles"], name: enabled}
-        return state
+        # Optimistic concurrency control: without the updated_at predicate two
+        # admins toggling at once silently overwrite each other's change.
+        for _ in range(3):
+            current = await self.get_state()
+            toggles = dict(current["toggles"])
+            toggles[name] = enabled
+            payload = {
+                "toggles": toggles,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            previous = current.get("updated_at")
+            if not previous:
+                # No persisted row: seed it now rather than no-oping forever.
+                await self._run(
+                    self.db.table(STATE_TABLENAME)
+                    .upsert({"id": 1, **payload}, on_conflict="id")
+                    .execute
+                )
+                return await self.get_state()
+            query = (
+                self.db.table(STATE_TABLENAME)
+                .update(payload)
+                .eq("id", 1)
+                .eq("updated_at", previous)
+            )
+            res = await self._run(query.execute)
+            row = self._row(res)
+            if row is not None:
+                return self._normalise(row)
+        raise RuntimeError("Concurrent admin-toggle update; please retry")
 
     @staticmethod
     def _normalise(row: dict) -> dict:

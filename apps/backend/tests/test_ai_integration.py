@@ -11,6 +11,15 @@ from app.services.ai_integration import SessionModelCache
 HTTPXTARGET = "app.services.ai_integration.httpx.AsyncClient"
 
 
+def _resolve_public(monkeypatch, ip="93.184.216.34"):
+    import ipaddress
+
+    async def resolve(host, port):
+        return [ipaddress.ip_address(ip)]
+
+    monkeypatch.setattr("app.services.ai_integration._resolve_host", resolve)
+
+
 def _patch_httpx(monkeypatch, handler):
     transport = httpx.MockTransport(handler)
     real_client = httpx.AsyncClient
@@ -124,16 +133,28 @@ def test_ollama_connect_hits_tags_endpoint(client, fakes, monkeypatch):
     seen = []
 
     def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(str(request.url))
+        seen.append((str(request.url), request.headers.get("host")))
         return httpx.Response(200, json=OLLAMA_TAGS)
 
+    _resolve_public(monkeypatch)
     _patch_httpx(monkeypatch, handler)
     res = client.post("/api/v1/ai/keys", json={"provider": "ollama", "ollama_base_url": "http://host:11434"})
     assert res.status_code == 200
     body = res.json()
     assert body["status"] == "active"
     assert body["models"][0]["id"] == "llama3.2"
-    assert seen == ["http://host:11434/api/tags"]
+    # Connection is pinned to the validated address, original hostname preserved.
+    assert seen == [("http://93.184.216.34:11434/api/tags", "host:11434")]
+
+
+def test_ollama_hostname_resolving_to_private_ip_is_rejected(client, monkeypatch):
+    _resolve_public(monkeypatch, ip="127.0.0.1")
+    res = client.post(
+        "/api/v1/ai/keys",
+        json={"provider": "ollama", "ollama_base_url": "http://metadata.example:11434"},
+    )
+    assert res.status_code == 400
+    assert "private" in res.json()["detail"].lower()
 
 
 def test_ollama_requires_base_url(client):

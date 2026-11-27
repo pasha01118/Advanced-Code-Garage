@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { getSwarm } from "./api";
 import type { SwarmResponse } from "./types";
 
@@ -10,46 +10,62 @@ export interface LiveSwarm {
   refresh: () => void;
 }
 
-export function useLiveSwarm(): LiveSwarm {
-  const [swarm, setSwarm] = useState<SwarmResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const inFlightRef = useRef(false);
-  const mountedRef = useRef(true);
+interface SwarmStoreState {
+  swarm: SwarmResponse | null;
+  error: string | null;
+}
 
-  const refresh = async () => {
-    if (inFlightRef.current) return;
-    inFlightRef.current = true;
-    try {
-      const data = await getSwarm();
-      if (mountedRef.current) {
-        setSwarm(data);
-        setError(null);
-      }
-    } catch (err) {
-      if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : "Failed to reach backend");
-      }
-    } finally {
-      inFlightRef.current = false;
+// One store and one poll loop shared by every hook consumer.
+let state: SwarmStoreState = { swarm: null, error: null };
+const listeners = new Set<() => void>();
+let inFlight = false;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+function emit(): void {
+  for (const listener of listeners) listener();
+}
+
+async function refreshShared(): Promise<void> {
+  if (inFlight) return;
+  inFlight = true;
+  try {
+    const data = await getSwarm();
+    state = { swarm: data, error: null };
+  } catch (err) {
+    state = { ...state, error: err instanceof Error ? err.message : "Failed to reach backend" };
+  } finally {
+    inFlight = false;
+    emit();
+  }
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  if (!pollTimer) {
+    void refreshShared();
+    pollTimer = setInterval(() => {
+      void refreshShared();
+    }, 5000);
+  }
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0 && pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
     }
   };
+}
 
-  useEffect(() => {
-    mountedRef.current = true;
-    const interval = setInterval(() => {
-      refresh();
-    }, 5000);
+function getSnapshot(): SwarmStoreState {
+  return state;
+}
 
-    const boot = setTimeout(() => {
-      refresh();
-    }, 0);
-
-    return () => {
-      mountedRef.current = false;
-      clearInterval(interval);
-      clearTimeout(boot);
-    };
-  }, []);
-
-  return { swarm, error, refresh };
+export function useLiveSwarm(): LiveSwarm {
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return {
+    swarm: snapshot.swarm,
+    error: snapshot.error,
+    refresh: () => refreshShared(),
+  };
 }

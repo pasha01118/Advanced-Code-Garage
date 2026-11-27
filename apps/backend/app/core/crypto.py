@@ -20,6 +20,13 @@ def _derive_fernet_key(secret: str) -> bytes:
 def get_fernet() -> Fernet:
     settings = get_settings()
     secret = settings.user_key_encryption_key or settings.secret_key or "change-me"
+    if getattr(settings, "is_production", False):
+        lowered = secret.strip().lower()
+        if lowered.startswith("your-") or "change-me" in lowered or len(secret) < 32:
+            raise RuntimeError(
+                "USER_KEY_ENCRYPTION_KEY (or a strong, non-placeholder SECRET_KEY of at "
+                "least 32 characters) must be configured in production before storing provider keys."
+            )
     return Fernet(_derive_fernet_key(secret))
 
 

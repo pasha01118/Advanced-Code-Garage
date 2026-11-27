@@ -1,17 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { bootstrapAdmin } from "@/lib/api";
-import { useRouter } from "next/navigation";
-import { Cpu, Mail, Lock, User, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Cpu, Mail, Lock, User, KeyRound, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
 
 type Mode = "signin" | "signup" | "admin";
 
-export default function LoginPage() {
+/** Only internal paths are safe to use as a post-login redirect. */
+function safeReturnPath(value: string | null): string {
+  if (
+    !value ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\") ||
+    value === "/login"
+  ) {
+    return "/";
+  }
+  return value;
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const reason = searchParams.get("reason");
+  const notice =
+    reason === "switch"
+      ? "Signed out. Sign in with the profile you want to switch to."
+      : reason === "logout"
+        ? "You have been signed out."
+        : null;
+  const returnTo = safeReturnPath(searchParams.get("next"));
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [bootstrapToken, setBootstrapToken] = useState("");
   const [mode, setMode] = useState<Mode>("signin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +57,10 @@ export default function LoginPage() {
       setError("Supabase client not initialized. Check environment variables.");
       return;
     }
+    if (isAdmin && !bootstrapToken.trim()) {
+      setError("Bootstrap token is required for first-run admin sign-up.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -43,11 +72,12 @@ export default function LoginPage() {
           email,
           password,
           ...(name ? { name } : {}),
+          bootstrap_token: bootstrapToken.trim(),
         });
         setSuccess(`${result.message} Signing you in as ${result.email} (${result.role}).`);
         const { error: signInError } = await supabase!.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
-        router.push("/");
+        router.push(returnTo);
       } else if (isSignUp) {
         const { error } = await supabase!.auth.signUp({ email, password });
         if (error) throw error;
@@ -55,7 +85,7 @@ export default function LoginPage() {
       } else {
         const { error } = await supabase!.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push("/");
+        router.push(returnTo);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Authentication failed";
@@ -125,30 +155,57 @@ export default function LoginPage() {
           </div>
         )}
 
+        {notice && (
+          <div className="mb-4 p-3 bg-blue-950/50 border border-blue-800/60 text-blue-200 text-sm rounded-lg">
+            {notice}
+          </div>
+        )}
+
         <form onSubmit={handleAuth} className="space-y-4">
           {isAdmin && (
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Display Name <span className="text-slate-500">(optional)</span>
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="Operator Name"
-                />
+            <>
+              <div>
+                <label htmlFor="admin-name" className="block text-sm font-medium text-slate-300 mb-1">
+                  Display Name <span className="text-slate-500">(optional)</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <input
+                    id="admin-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Operator Name"
+                  />
+                </div>
               </div>
-            </div>
+              <div>
+                <label htmlFor="bootstrap-token" className="block text-sm font-medium text-slate-300 mb-1">
+                  Bootstrap Token <span className="text-slate-500">(if required)</span>
+                </label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                  <input
+                    id="bootstrap-token"
+                    type="password"
+                    value={bootstrapToken}
+                    onChange={(e) => setBootstrapToken(e.target.value)}
+                    autoComplete="off"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="Server bootstrap token"
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1">Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
               <input
+                id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -160,10 +217,11 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -220,5 +278,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-950">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

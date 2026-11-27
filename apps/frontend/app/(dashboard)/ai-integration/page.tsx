@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Sparkles,
   Loader2,
@@ -92,37 +92,90 @@ function OllamaModal({
   url,
   onChange,
   onConnect,
+  onClose,
   busy,
 }: {
   url: string;
   onChange: (v: string) => void;
   onConnect: () => void;
+  onClose: () => void;
   busy: boolean;
 }) {
-  const [open, setOpen] = useState(true);
-  if (!open) return null;
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    inputRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ollama-modal-title"
+        aria-describedby="ollama-modal-description"
+        className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl p-6"
+      >
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold flex items-center gap-2">
+            <h3 id="ollama-modal-title" className="text-lg font-semibold flex items-center gap-2">
               <Server className="w-5 h-5 text-purple-400" /> Connect Ollama
             </h3>
-            <p className="text-xs text-slate-500 mt-1">
+            <p id="ollama-modal-description" className="text-xs text-slate-500 mt-1">
               Local (http://localhost:11434) or a cloud Ollama endpoint. No API
               key required.
             </p>
           </div>
           <button
-            onClick={() => setOpen(false)}
+            onClick={onClose}
+            aria-label="Close Ollama setup"
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-        <label className="block text-xs text-slate-400 mb-1.5">Base URL</label>
+        <label htmlFor="ollama-base-url" className="block text-xs text-slate-400 mb-1.5">Base URL</label>
         <input
+          id="ollama-base-url"
+          ref={inputRef}
           value={url}
           onChange={(e) => onChange(e.target.value)}
           placeholder="http://localhost:11434"
@@ -143,7 +196,7 @@ function OllamaModal({
             {busy ? "Connecting..." : "Connect"}
           </button>
           <button
-            onClick={() => setOpen(false)}
+            onClick={onClose}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors"
           >
             Cancel
@@ -172,6 +225,7 @@ export default function AIIntegrationPage() {
 
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
   const [ollamaModal, setOllamaModal] = useState(false);
+  const closeOllamaModal = useCallback(() => setOllamaModal(false), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,7 +261,9 @@ export default function AIIntegrationPage() {
       },
     }));
     setModels((prev) => ({ ...prev, [result.provider]: result.models }));
+    // Models returned by validation are fresh, not server-cached.
     setModelsCached((prev) => ({ ...prev, [result.provider]: false }));
+    setShowAll((prev) => ({ ...prev, [result.provider]: false }));
     setExpanded((prev) => ({ ...prev, [result.provider]: true }));
   };
 
@@ -257,6 +313,16 @@ export default function AIIntegrationPage() {
         delete next[providerId];
         return next;
       });
+      setModelsCached((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+      setShowAll((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
       setExpanded((prev) => ({ ...prev, [providerId]: false }));
       setKeyInputs((prev) => ({ ...prev, [providerId]: "" }));
     } catch (err) {
@@ -272,7 +338,7 @@ export default function AIIntegrationPage() {
       try {
         const result = await getAIModels(providerId);
         setModels((prev) => ({ ...prev, [providerId]: result.models }));
-        setModelsCached((prev) => ({ ...prev, [providerId]: result.cached }));
+        setModelsCached((prev) => ({ ...prev, [providerId]: Boolean(result.cached) }));
       } catch (err) {
         setErrors((prev) => ({ ...prev, [providerId]: err instanceof Error ? err.message : "Failed to load models" }));
       } finally {
@@ -491,6 +557,7 @@ export default function AIIntegrationPage() {
         <OllamaModal
           url={ollamaUrl}
           onChange={setOllamaUrl}
+          onClose={closeOllamaModal}
           onConnect={() => {
             const entry = catalog.find((p) => p.id === "ollama");
             if (entry) connect(entry, ollamaUrl);

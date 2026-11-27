@@ -49,9 +49,29 @@ def run(coro):
     return asyncio.run(coro)
 
 
+@pytest.fixture(autouse=True)
+def configured_bootstrap(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services.ops_state import OpsStateService, get_ops_service
+    from tests.fakes import FakeAdminRepository
+
+    monkeypatch.setattr(
+        "app.services.auth_bootstrap.get_settings",
+        lambda: SimpleNamespace(
+            supabase_url="http://sb",
+            supabase_service_role_key="key",
+            app_bootstrap_token="boot-token",
+        ),
+    )
+    app.dependency_overrides[get_ops_service] = lambda: OpsStateService(repo=FakeAdminRepository())
+    yield
+    app.dependency_overrides.pop(get_ops_service, None)
+
+
 def test_first_run_creates_admin():
     fake = FakeSupabaseAdmin()
-    result = run(make_service(fake).bootstrap("admin@example.com", "S3curePassw0rd!", None, None))
+    result = run(make_service(fake).bootstrap("admin@example.com", "S3curePassw0rd!", None, "boot-token"))
     assert result["role"] == "admin"
     assert result["user_id"] == "created-admin-id"
     created = fake.creates[0]
@@ -64,19 +84,31 @@ def test_existing_admin_blocks_bootstrap():
     existing = {"id": "existing", "email": "root@advancedcodegarage.dev", "app_metadata": {"role": "admin"}}
     service = make_service(FakeSupabaseAdmin(users=[existing]))
     with raises_bootstrap(409):
-        run(service.bootstrap("other@example.com", "S3curePassw0rd!", None, None))
+        run(service.bootstrap("other@example.com", "S3curePassw0rd!", None, "boot-token"))
 
 
-def test_adopts_existing_unconfirmed_user():
+def test_existing_email_is_not_silently_promoted():
     fake = FakeSupabaseAdmin(
         users=[{"id": "stale-id", "email": "admin@example.com", "app_metadata": {"role": None}}]
     )
-    result = run(make_service(fake).bootstrap("admin@example.com", "S3curePassw0rd!", "Admin", None))
-    assert result["user_id"] == "stale-id"
-    assert result["role"] == "admin"
-    assert fake.updates[0][0] == "stale-id"
-    assert fake.updates[0][1]["app_metadata"]["role"] == "admin"
-    assert fake.updates[0][1]["email_confirm"] is True
+    with raises_bootstrap(409):
+        run(make_service(fake).bootstrap("admin@example.com", "S3curePassw0rd!", "Admin", "boot-token"))
+    assert fake.updates == []
+
+
+def test_bootstrap_disabled_without_token(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "app.services.auth_bootstrap.get_settings",
+        lambda: SimpleNamespace(
+            supabase_url="http://sb",
+            supabase_service_role_key="key",
+            app_bootstrap_token="",
+        ),
+    )
+    with raises_bootstrap(503):
+        run(make_service(FakeSupabaseAdmin()).bootstrap("a@b.com", "S3curePassw0rd!", None, None))
 
 
 def test_token_guard(monkeypatch):
@@ -115,7 +147,12 @@ def test_api_bootstrap_route_with_mocked_backend():
     try:
         response = client.post(
             "/api/v1/auth/bootstrap",
-            json={"email": "admin@example.com", "password": "S3curePassw0rd!", "name": "Admin"},
+            json={
+                "email": "admin@example.com",
+                "password": "S3curePassw0rd!",
+                "name": "Admin",
+                "bootstrap_token": "boot-token",
+            },
         )
     finally:
         app.dependency_overrides.clear()

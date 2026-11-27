@@ -30,9 +30,11 @@ on conflict (id) do nothing;
 
 alter table public.app_state enable row level security;
 
+drop policy if exists "app_state_select_any_authed" on public.app_state;
 create policy "app_state_select_any_authed" on public.app_state
     for select to authenticated using (true);
 
+drop policy if exists "app_state_admin_write" on public.app_state;
 create policy "app_state_admin_write" on public.app_state
     for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
@@ -51,6 +53,7 @@ create table if not exists public.provider_metrics (
 
 alter table public.provider_metrics enable row level security;
 
+drop policy if exists "provider_metrics_admin_all" on public.provider_metrics;
 create policy "provider_metrics_admin_all" on public.provider_metrics
     for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
@@ -70,12 +73,15 @@ create table if not exists public.sentinel_events (
                     check (status in ('open', 'resolved', 'auto_fixed')),
     suggested_fix   text not null default '',
     auto_fix_report text not null default '',
+    owner_id        uuid,
+    provider        text,
     resolved_at     timestamptz
 );
 
 create index if not exists sentinel_events_created_idx on public.sentinel_events (created_at desc);
 alter table public.sentinel_events enable row level security;
 
+drop policy if exists "sentinel_events_admin_all" on public.sentinel_events;
 create policy "sentinel_events_admin_all" on public.sentinel_events
     for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
@@ -91,5 +97,6 @@ create table if not exists public.sentinel_discussion (
 
 alter table public.sentinel_discussion enable row level security;
 
+drop policy if exists "sentinel_discussion_admin_all" on public.sentinel_discussion;
 create policy "sentinel_discussion_admin_all" on public.sentinel_discussion
     for all to authenticated using (public.is_admin()) with check (public.is_admin());

@@ -3,6 +3,7 @@ services:
     name: acg-backend
     env: python
     region: oregon
+    rootDir: apps/backend
     buildCommand: "pip install --no-cache-dir -r requirements.txt"
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
@@ -16,7 +17,19 @@ services:
         sync: false
       - key: SECRET_KEY
         generateValue: true
+      - key: USER_KEY_ENCRYPTION_KEY
+        sync: false
+      - key: APP_BOOTSTRAP_TOKEN
+        sync: false
+      - key: ADMIN_RESET_TOKEN
+        sync: false
+      - key: ADMIN_USER_IDS
+        sync: false
       - key: GOOGLE_AI_STUDIO_KEY
+        sync: false
+      - key: GOOGLE_AI_STUDIO_PROXY
+        sync: false
+      - key: GOOGLE_AI_STUDIO_PROXY_TOKEN
         sync: false
       - key: OLLAMA_BASE_URL
         value: "http://localhost:11434"
@@ -24,3 +37,5 @@ services:
         value: "http://localhost:3000,https://advanced-code-garage-rgke.vercel.app,https://advanced-code-garage.vercel.app"
       - key: ENVIRONMENT
         value: "production"
+      - key: SENTINEL_INTERVAL_SECONDS
+        value: "60"

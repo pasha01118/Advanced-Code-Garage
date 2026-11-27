@@ -54,6 +54,8 @@ async def save_key(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.delete("/keys/{provider}", response_model=AIDeleteOut)
@@ -79,6 +81,8 @@ async def validate_key(
         return await service.validate(owner_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/keys/{provider}/models", response_model=AIModelListOut)
@@ -93,3 +97,5 @@ async def list_provider_models(
         return await service.models(owner_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

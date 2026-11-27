@@ -90,7 +90,8 @@ class GeminiProvider:
         else:
             raise RuntimeError(
                 f"Gemini request failed after {self.retries} attempts: "
-                f"{_redact(str(last_exc), self.api_key)} body={last_body[:300]!r}"
+                f"{_redact(str(last_exc), self.api_key)} "
+                f"body={_redact(last_body[:300], self.api_key)!r}"
             ) from last_exc
         try:
             text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -156,7 +157,8 @@ class GeminiProxyProvider:
         else:
             raise RuntimeError(
                 f"Gemini proxy request failed after {self.retries} attempts: "
-                f"{_redact(str(last_exc), self.token)} body={last_body[:300]!r}"
+                f"{_redact(str(last_exc), self.token)} "
+                f"body={_redact(last_body[:300], self.token)!r}"
             ) from last_exc
         text = (data.get("text") or "").strip() if isinstance(data, dict) else ""
         if not text:
@@ -231,7 +233,9 @@ class ModelRouter:
                 provider.name,
             )
         except Exception as exc:
-            redacted = _redact(str(exc), self.settings.google_ai_studio_key)
+            redacted = _redact(str(exc), getattr(provider, "api_key", None))
+            redacted = _redact(redacted, getattr(provider, "token", None))
+            redacted = _redact(redacted, self.settings.google_ai_studio_key)
             redacted = _redact(redacted, self.settings.google_ai_studio_proxy_token)
             logger.warning("Model route %s failed: %s; falling back to simulated", provider.name, redacted)
         return await SimulatedProvider().complete(prompt), "simulated"

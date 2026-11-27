@@ -1,3 +1,5 @@
+import hmac
+
 import httpx
 from fastapi import HTTPException, status
 
@@ -80,25 +82,6 @@ class BootstrapService:
                 await client.aclose()
         return response
 
-    async def _adopt_existing_user(self, user_id: str) -> None:
-        payload = {
-            "app_metadata": {"role": ADMIN_ROLE},
-            "email_confirm": True,
-        }
-        client = self._new_client()
-        try:
-            response = await client.put(
-                f"{self._admin_api}/users/{user_id}", headers=self._headers(), json=payload
-            )
-        finally:
-            if self._client is None:
-                await client.aclose()
-        if response.status_code >= 300:
-            raise BootstrapError(
-                f"Could not upgrade existing user '{user_id}' to admin ({response.status_code}).",
-                status.HTTP_502_BAD_GATEWAY,
-            )
-
     @staticmethod
     def _user_is_admin(user: dict) -> bool:
         app_metadata = user.get("app_metadata") or {}
@@ -108,10 +91,14 @@ class BootstrapService:
         settings = self._settings()
 
         expected = settings.app_bootstrap_token
-        if expected and token != expected:
+        # Fail closed: bootstrap must never be an anonymous "create admin" API.
+        if not expected:
             raise BootstrapError(
-                "Invalid bootstrap token. APP_BOOTSTRAP_TOKEN is configured.", status.HTTP_401_UNAUTHORIZED
+                "Admin bootstrap is disabled: APP_BOOTSTRAP_TOKEN is not configured.",
+                status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+        if not token or not hmac.compare_digest(token, expected):
+            raise BootstrapError("Invalid bootstrap token.", status.HTTP_401_UNAUTHORIZED)
 
         users = await self._list_users()
         existing_admin = next((u for u in users if self._user_is_admin(u)), None)
@@ -121,15 +108,14 @@ class BootstrapService:
                 status.HTTP_409_CONFLICT,
             )
 
+        # Never promote an existing account just because the caller knows its
+        # email: that would be admin takeover without proof of control.
         if any(u.get("email", "").lower() == email.lower() for u in users):
-            target = next(u for u in users if u.get("email", "").lower() == email.lower())
-            await self._adopt_existing_user(target["id"])
-            return {
-                "user_id": target["id"],
-                "email": email,
-                "role": ADMIN_ROLE,
-                "message": "Existing account upgraded to ADMIN (email confirmation bypassed).",
-            }
+            raise BootstrapError(
+                "An account with that email already exists. Sign in and use the "
+                "admin password-reset flow to grant admin access.",
+                status.HTTP_409_CONFLICT,
+            )
 
         response = await self._create_user(email, password, name)
         if response.status_code >= 300:

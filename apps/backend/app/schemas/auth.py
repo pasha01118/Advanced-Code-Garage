@@ -5,7 +5,13 @@ class AdminBootstrapRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     name: str | None = Field(default=None, max_length=120)
-    bootstrap_token: str | None = Field(default=None, max_length=200)
+    bootstrap_token: str = Field(min_length=1, max_length=200)
+
+
+class AuthMeOut(BaseModel):
+    user_id: str
+    email: str | None = None
+    is_admin: bool
 
 
 class AdminBootstrapOut(BaseModel):
