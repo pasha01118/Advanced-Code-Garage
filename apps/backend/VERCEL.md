@@ -47,6 +47,7 @@ Copy these from the Render service (same names, same values):
 | `GITHUB_APP_WEBHOOK_SECRET` | used to verify `X-Hub-Signature-256` |
 | `VAULT_KEK_VERSION` | current repository-secrets key version, e.g. `v1` |
 | `VAULT_PREVIOUS_KEKS` | `v1:<old-secret>,…` while rotating a KEK |
+| `GITHUB_API_BASE_URL` | `https://api.github.com`, or your GitHub Enterprise `/api/v3` URL |
 
 `USER_KEY_ENCRYPTION_KEY` should be a dedicated 32+ character secret in
 production. It protects both AI provider keys and repository secrets; never
@@ -69,8 +70,17 @@ reuse a placeholder value.
    registers the installation; an admin can then call
    `POST /api/v1/github/installations/{id}/sync` (or use **Repositories → Sync**
    in the dashboard).
-6. Apply `sql/0006_github_vault.sql` before using repositories or the secrets
-   vault.
+6. Apply `sql/0006_github_vault.sql` and `sql/0007_repo_ops.sql` before using
+   repositories, the secrets vault, or Git operations.
+7. An admin must call `POST /api/v1/github/installations/{id}/sync` after
+   installing the App. Sync grants the acting admin `owner` on the discovered
+   repositories; other users need an explicit role from
+   `POST /api/v1/repositories/{id}/permissions`.
+
+Repository file, branch, PR, diff and customization endpoints use the GitHub
+REST API with short-lived installation tokens. Requests are bounded and finish
+within a single function invocation, so they work on both Render and Vercel.
+Long-running background pipelines should stay on a Render worker.
 
 No personal access token is stored. Installation tokens are minted on demand
 from the App private key and are never sent to the browser.

@@ -54,6 +54,23 @@ import type {
   SecretListOut,
   SecretOut,
   SecretRevokeOut,
+  BranchListOut,
+  TreeListOut,
+  FileOut,
+  FileWriteRequest,
+  CommitOut,
+  PullListOut,
+  PullOut,
+  PullCreateRequest,
+  CompareOut,
+  ConfigOut,
+  ConfigPreviewOut,
+  ConfigPreviewRequest,
+  ConfigApplyRequest,
+  TemplateListOut,
+  RepoAuditListOut,
+  RepoRoleListOut,
+  RepoPermissionRequest,
 } from "./types";
 import { supabase } from "./supabaseClient";
 
@@ -460,4 +477,162 @@ export function revokeSecret(secretId: string): Promise<SecretRevokeOut> {
 
 export function getSecretAudit(secretId: string): Promise<SecretAuditListOut> {
   return requestAuthed(`/v1/secrets/${encodeURIComponent(secretId)}/audit`);
+}
+
+// -- Repository operations + customization -----------------------------------
+
+function repoPath(repositoryId: string): string {
+  return `/v1/repositories/${encodeURIComponent(repositoryId)}`;
+}
+
+export function listBranches(repositoryId: string): Promise<BranchListOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/branches`);
+}
+
+export function createBranch(
+  repositoryId: string,
+  payload: { name: string; from_ref?: string }
+): Promise<{ name: string; sha: string; protected: boolean }> {
+  return requestAuthed(`${repoPath(repositoryId)}/branches`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteBranch(repositoryId: string, branch: string): Promise<unknown> {
+  return requestAuthed(
+    `${repoPath(repositoryId)}/branches/${branch.split("/").map(encodeURIComponent).join("/")}`,
+    { method: "DELETE" }
+  );
+}
+
+export function listFiles(
+  repositoryId: string,
+  filters: { branch?: string; path?: string } = {}
+): Promise<TreeListOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/files${queryString(filters)}`);
+}
+
+export function getFile(
+  repositoryId: string,
+  path: string,
+  branch?: string
+): Promise<FileOut> {
+  return requestAuthed(
+    `${repoPath(repositoryId)}/file${queryString({ path, branch })}`
+  );
+}
+
+export function writeFile(repositoryId: string, payload: FileWriteRequest): Promise<CommitOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/file`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listPulls(repositoryId: string, state = "open"): Promise<PullListOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/pulls${queryString({ state })}`);
+}
+
+export function createPull(repositoryId: string, payload: PullCreateRequest): Promise<PullOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/pulls`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updatePull(
+  repositoryId: string,
+  number: number,
+  payload: { title?: string; body?: string; state?: "open" | "closed" }
+): Promise<PullOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/pulls/${number}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function mergePull(
+  repositoryId: string,
+  number: number,
+  payload: {
+    merge_method?: "merge" | "squash" | "rebase";
+    commit_title?: string;
+    commit_message?: string;
+    idempotency_key?: string;
+  }
+): Promise<{ merged: boolean; sha: string; message: string }> {
+  return requestAuthed(`${repoPath(repositoryId)}/pulls/${number}/merge`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function compareRefs(
+  repositoryId: string,
+  base: string,
+  head: string
+): Promise<CompareOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/compare${queryString({ base, head })}`);
+}
+
+export function getRepoConfig(repositoryId: string, branch?: string): Promise<ConfigOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/config${queryString({ branch })}`);
+}
+
+export function previewRepoConfig(
+  repositoryId: string,
+  payload: ConfigPreviewRequest
+): Promise<ConfigPreviewOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/config/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function applyRepoConfig(
+  repositoryId: string,
+  payload: ConfigApplyRequest
+): Promise<CommitOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/config`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listRepoTemplates(repositoryId: string): Promise<TemplateListOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/templates`);
+}
+
+export function listRepoAudit(repositoryId: string): Promise<RepoAuditListOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/audit`);
+}
+
+export function listRepoPermissions(repositoryId: string): Promise<RepoRoleListOut> {
+  return requestAuthed(`${repoPath(repositoryId)}/permissions`);
+}
+
+export function grantRepoPermission(
+  repositoryId: string,
+  payload: RepoPermissionRequest
+): Promise<unknown> {
+  return requestAuthed(`${repoPath(repositoryId)}/permissions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function revokeRepoPermission(repositoryId: string, userId: string): Promise<unknown> {
+  return requestAuthed(
+    `${repoPath(repositoryId)}/permissions/${encodeURIComponent(userId)}`,
+    { method: "DELETE" }
+  );
 }

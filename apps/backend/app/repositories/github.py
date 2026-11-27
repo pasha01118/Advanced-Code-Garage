@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from app.repositories.base import SupabaseRepository
+from app.repositories.repo_ops import RepoOpsRepository
 
 INSTALLATIONS = "github_installations"
 REPOSITORIES = "github_repositories"
@@ -11,7 +12,7 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-class GitHubRepository(SupabaseRepository):
+class GitHubRepository(RepoOpsRepository, SupabaseRepository):
     """Store GitHub App installations, repositories and webhook deliveries."""
 
     async def upsert_installation(

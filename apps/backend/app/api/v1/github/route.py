@@ -61,7 +61,7 @@ async def sync_installation(
 ) -> SyncOut:
     try:
         await service.repo.link_installation(installation_id, user["sub"])
-        result = await service.sync_installation(installation_id)
+        result = await service.sync_installation(installation_id, actor=user["sub"])
     except GitHubNotConfigured as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)

@@ -871,6 +871,249 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/repositories/{repository_id}/branches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Branches */
+        get: operations["list_branches_api_v1_repositories__repository_id__branches_get"];
+        put?: never;
+        /** Create Branch */
+        post: operations["create_branch_api_v1_repositories__repository_id__branches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/branches/{branch}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Branch */
+        delete: operations["delete_branch_api_v1_repositories__repository_id__branches__branch__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Files */
+        get: operations["list_files_api_v1_repositories__repository_id__files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get File */
+        get: operations["get_file_api_v1_repositories__repository_id__file_get"];
+        /** Write File */
+        put: operations["write_file_api_v1_repositories__repository_id__file_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/pulls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pulls */
+        get: operations["list_pulls_api_v1_repositories__repository_id__pulls_get"];
+        put?: never;
+        /** Create Pull */
+        post: operations["create_pull_api_v1_repositories__repository_id__pulls_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/pulls/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Pull */
+        patch: operations["update_pull_api_v1_repositories__repository_id__pulls__number__patch"];
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/pulls/{number}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Merge Pull */
+        put: operations["merge_pull_api_v1_repositories__repository_id__pulls__number__merge_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare */
+        get: operations["compare_api_v1_repositories__repository_id__compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Config */
+        get: operations["get_config_api_v1_repositories__repository_id__config_get"];
+        put?: never;
+        /** Apply Config */
+        post: operations["apply_config_api_v1_repositories__repository_id__config_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/config/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Config */
+        post: operations["preview_config_api_v1_repositories__repository_id__config_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Templates */
+        get: operations["list_templates_api_v1_repositories__repository_id__templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Audit */
+        get: operations["list_audit_api_v1_repositories__repository_id__audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Permissions */
+        get: operations["list_permissions_api_v1_repositories__repository_id__permissions_get"];
+        put?: never;
+        /** Grant Permission */
+        post: operations["grant_permission_api_v1_repositories__repository_id__permissions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}/permissions/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Permission */
+        delete: operations["revoke_permission_api_v1_repositories__repository_id__permissions__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/secrets/": {
         parameters: {
             query?: never;
@@ -1154,6 +1397,36 @@ export interface components {
             /** Is Admin */
             is_admin: boolean;
         };
+        /** BranchCreateRequest */
+        BranchCreateRequest: {
+            /** Name */
+            name: string;
+            /**
+             * From Ref
+             * @default
+             */
+            from_ref: string;
+        };
+        /** BranchListOut */
+        BranchListOut: {
+            /** Branches */
+            branches: components["schemas"]["BranchOut"][];
+        };
+        /** BranchOut */
+        BranchOut: {
+            /** Name */
+            name: string;
+            /**
+             * Sha
+             * @default
+             */
+            sha: string;
+            /**
+             * Protected
+             * @default false
+             */
+            protected: boolean;
+        };
         /** BulkProjectRequest */
         BulkProjectRequest: {
             /** Ids */
@@ -1172,6 +1445,192 @@ export interface components {
             affected: number;
             /** Action */
             action: string;
+        };
+        /** CommitOut */
+        CommitOut: {
+            /**
+             * Commit Sha
+             * @default
+             */
+            commit_sha: string;
+            /**
+             * Path
+             * @default
+             */
+            path: string;
+            /**
+             * Branch
+             * @default
+             */
+            branch: string;
+            /**
+             * Content Url
+             * @default
+             */
+            content_url: string;
+        };
+        /** CompareFileOut */
+        CompareFileOut: {
+            /** Filename */
+            filename: string;
+            /**
+             * Status
+             * @default
+             */
+            status: string;
+            /**
+             * Additions
+             * @default 0
+             */
+            additions: number;
+            /**
+             * Deletions
+             * @default 0
+             */
+            deletions: number;
+            /**
+             * Patch
+             * @default
+             */
+            patch: string;
+        };
+        /** CompareOut */
+        CompareOut: {
+            /** Base */
+            base: string;
+            /** Head */
+            head: string;
+            /**
+             * Ahead By
+             * @default 0
+             */
+            ahead_by: number;
+            /**
+             * Behind By
+             * @default 0
+             */
+            behind_by: number;
+            /**
+             * Total Commits
+             * @default 0
+             */
+            total_commits: number;
+            /** Files */
+            files: components["schemas"]["CompareFileOut"][];
+        };
+        /** ConfigApplyRequest */
+        ConfigApplyRequest: {
+            config: components["schemas"]["RepoConfig"];
+            /**
+             * Branch
+             * @default
+             */
+            branch: string;
+            /**
+             * Message
+             * @default Update .acg/config.yaml
+             */
+            message: string;
+            /**
+             * Idempotency Key
+             * @default
+             */
+            idempotency_key: string;
+        };
+        /** ConfigOut */
+        ConfigOut: {
+            /** Repository Id */
+            repository_id: string;
+            /** Branch */
+            branch: string;
+            /** Path */
+            path: string;
+            /** Exists */
+            exists: boolean;
+            /**
+             * Sha
+             * @default
+             */
+            sha: string;
+            config: components["schemas"]["RepoConfig"];
+            /** Yaml */
+            yaml: string;
+        };
+        /** ConfigPreviewOut */
+        ConfigPreviewOut: {
+            /** Path */
+            path: string;
+            /** Branch */
+            branch: string;
+            /** Diff */
+            diff: string;
+            /** Changed */
+            changed: boolean;
+        };
+        /** ConfigPreviewRequest */
+        ConfigPreviewRequest: {
+            config: components["schemas"]["RepoConfig"];
+            /**
+             * Branch
+             * @default
+             */
+            branch: string;
+            /**
+             * Message
+             * @default Update .acg/config.yaml
+             */
+            message: string;
+        };
+        /** FileOut */
+        FileOut: {
+            /** Path */
+            path: string;
+            /** Branch */
+            branch: string;
+            /** Content */
+            content: string;
+            /**
+             * Sha
+             * @default
+             */
+            sha: string;
+            /**
+             * Size
+             * @default 0
+             */
+            size: number;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /** FileWriteRequest */
+        FileWriteRequest: {
+            /** Path */
+            path: string;
+            /** Content */
+            content: string;
+            /**
+             * Message
+             * @default Update via Advanced Code Garage
+             */
+            message: string;
+            /**
+             * Branch
+             * @default
+             */
+            branch: string;
+            /**
+             * Sha
+             * @default
+             */
+            sha: string;
+            /**
+             * Idempotency Key
+             * @default
+             */
+            idempotency_key: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1244,6 +1703,21 @@ export interface components {
         LogHistoryOut: {
             /** Entries */
             entries: components["schemas"]["LogHistoryEntryOut"][];
+        };
+        /** MergeOut */
+        MergeOut: {
+            /** Merged */
+            merged: boolean;
+            /**
+             * Sha
+             * @default
+             */
+            sha: string;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
         };
         /** MetricPointOut */
         MetricPointOut: {
@@ -1502,6 +1976,205 @@ export interface components {
              * @default
              */
             suggestion: string;
+        };
+        /** PullCreateRequest */
+        PullCreateRequest: {
+            /** Title */
+            title: string;
+            /** Head */
+            head: string;
+            /**
+             * Base
+             * @default
+             */
+            base: string;
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+            /**
+             * Draft
+             * @default false
+             */
+            draft: boolean;
+            /**
+             * Idempotency Key
+             * @default
+             */
+            idempotency_key: string;
+        };
+        /** PullListOut */
+        PullListOut: {
+            /** Pulls */
+            pulls: components["schemas"]["PullOut"][];
+        };
+        /** PullMergeRequest */
+        PullMergeRequest: {
+            /**
+             * Merge Method
+             * @default merge
+             * @enum {string}
+             */
+            merge_method: "merge" | "squash" | "rebase";
+            /**
+             * Commit Title
+             * @default
+             */
+            commit_title: string;
+            /**
+             * Commit Message
+             * @default
+             */
+            commit_message: string;
+            /**
+             * Idempotency Key
+             * @default
+             */
+            idempotency_key: string;
+        };
+        /** PullOut */
+        PullOut: {
+            /** Number */
+            number: number;
+            /** Title */
+            title: string;
+            /**
+             * State
+             * @default open
+             */
+            state: string;
+            /**
+             * Head
+             * @default
+             */
+            head: string;
+            /**
+             * Base
+             * @default
+             */
+            base: string;
+            /**
+             * Url
+             * @default
+             */
+            url: string;
+            /**
+             * Draft
+             * @default false
+             */
+            draft: boolean;
+        };
+        /** PullUpdateRequest */
+        PullUpdateRequest: {
+            /** Title */
+            title?: string | null;
+            /** Body */
+            body?: string | null;
+            /** State */
+            state?: ("open" | "closed") | null;
+        };
+        /** RepoAuditListOut */
+        RepoAuditListOut: {
+            /** Entries */
+            entries: components["schemas"]["RepoAuditOut"][];
+        };
+        /** RepoAuditOut */
+        RepoAuditOut: {
+            /** Id */
+            id: string;
+            /** Repository Id */
+            repository_id: string;
+            /** Actor */
+            actor: string;
+            /** Action */
+            action: string;
+            /**
+             * Target
+             * @default
+             */
+            target: string;
+            /** Detail */
+            detail?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @default
+             */
+            request_id: string;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** RepoConfig */
+        RepoConfig: {
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
+            /**
+             * Agent Mode
+             * @default AI-Man
+             * @enum {string}
+             */
+            agent_mode: "Autonomous" | "AI-Man" | "Manual";
+            /** Allowed Providers */
+            allowed_providers?: string[];
+            /** Review Rules */
+            review_rules?: string[];
+            /** Required Checks */
+            required_checks?: string[];
+            /** Deployment Targets */
+            deployment_targets?: string[];
+            /**
+             * Branch Protection
+             * @default false
+             */
+            branch_protection: boolean;
+            /** Secret Bindings */
+            secret_bindings?: {
+                [key: string]: string;
+            };
+            /** Custom Commands */
+            custom_commands?: {
+                [key: string]: string;
+            };
+        };
+        /** RepoPermissionRequest */
+        RepoPermissionRequest: {
+            /** User Id */
+            user_id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "write" | "read";
+        };
+        /** RepoRoleListOut */
+        RepoRoleListOut: {
+            /** Entries */
+            entries: components["schemas"]["RepoRoleOut"][];
+        };
+        /** RepoRoleOut */
+        RepoRoleOut: {
+            /** Id */
+            id: string;
+            /** Repository Id */
+            repository_id: string;
+            /** User Id */
+            user_id: string;
+            /** Role */
+            role: string;
+            /**
+             * Granted By
+             * @default
+             */
+            granted_by: string;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
         };
         /** RepositoryListOut */
         RepositoryListOut: {
@@ -1815,6 +2488,53 @@ export interface components {
             repositories_updated: number;
             /** Total */
             total: number;
+        };
+        /** TemplateListOut */
+        TemplateListOut: {
+            /** Templates */
+            templates: components["schemas"]["TemplateOut"][];
+        };
+        /** TemplateOut */
+        TemplateOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            config: components["schemas"]["RepoConfig"];
+        };
+        /** TreeEntryOut */
+        TreeEntryOut: {
+            /** Path */
+            path: string;
+            /**
+             * Type
+             * @default blob
+             */
+            type: string;
+            /**
+             * Sha
+             * @default
+             */
+            sha: string;
+            /** Size */
+            size?: number | null;
+        };
+        /** TreeListOut */
+        TreeListOut: {
+            /** Branch */
+            branch: string;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+            /** Entries */
+            entries: components["schemas"]["TreeEntryOut"][];
         };
         /** UpdateAccountOut */
         UpdateAccountOut: {
@@ -3410,6 +4130,666 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RepositoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_branches_api_v1_repositories__repository_id__branches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_branch_api_v1_repositories__repository_id__branches_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BranchCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_branch_api_v1_repositories__repository_id__branches__branch__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path: {
+                repository_id: string;
+                branch: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_files_api_v1_repositories__repository_id__files_get: {
+        parameters: {
+            query?: {
+                branch?: string;
+                path?: string;
+            };
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TreeListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_file_api_v1_repositories__repository_id__file_get: {
+        parameters: {
+            query: {
+                path: string;
+                branch?: string;
+            };
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    write_file_api_v1_repositories__repository_id__file_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FileWriteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pulls_api_v1_repositories__repository_id__pulls_get: {
+        parameters: {
+            query?: {
+                state?: string;
+            };
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_pull_api_v1_repositories__repository_id__pulls_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_pull_api_v1_repositories__repository_id__pulls__number__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path: {
+                repository_id: string;
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    merge_pull_api_v1_repositories__repository_id__pulls__number__merge_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path: {
+                repository_id: string;
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullMergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_api_v1_repositories__repository_id__compare_get: {
+        parameters: {
+            query?: {
+                base?: string;
+                head?: string;
+            };
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_config_api_v1_repositories__repository_id__config_get: {
+        parameters: {
+            query?: {
+                branch?: string;
+            };
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_config_api_v1_repositories__repository_id__config_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_config_api_v1_repositories__repository_id__config_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_api_v1_repositories__repository_id__templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audit_api_v1_repositories__repository_id__audit_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoAuditListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_permissions_api_v1_repositories__repository_id__permissions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoRoleListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grant_permission_api_v1_repositories__repository_id__permissions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepoPermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_permission_api_v1_repositories__repository_id__permissions__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

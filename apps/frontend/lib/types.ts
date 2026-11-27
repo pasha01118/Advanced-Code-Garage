@@ -82,6 +82,33 @@ export type SecretRevokeOut = components["schemas"]["SecretRevokeOut"];
 export type SecretAuditOut = components["schemas"]["SecretAuditOut"];
 export type SecretAuditListOut = components["schemas"]["SecretAuditListOut"];
 
+// Repository operations + customization
+export type RepoConfig = components["schemas"]["RepoConfig"];
+export type AgentMode = RepoConfig["agent_mode"];
+export type BranchOut = components["schemas"]["BranchOut"];
+export type BranchListOut = components["schemas"]["BranchListOut"];
+export type TreeEntryOut = components["schemas"]["TreeEntryOut"];
+export type TreeListOut = components["schemas"]["TreeListOut"];
+export type FileOut = components["schemas"]["FileOut"];
+export type FileWriteRequest = components["schemas"]["FileWriteRequest"];
+export type CommitOut = components["schemas"]["CommitOut"];
+export type PullOut = components["schemas"]["PullOut"];
+export type PullListOut = components["schemas"]["PullListOut"];
+export type PullCreateRequest = components["schemas"]["PullCreateRequest"];
+export type CompareFileOut = components["schemas"]["CompareFileOut"];
+export type CompareOut = components["schemas"]["CompareOut"];
+export type ConfigOut = components["schemas"]["ConfigOut"];
+export type ConfigPreviewOut = components["schemas"]["ConfigPreviewOut"];
+export type ConfigPreviewRequest = components["schemas"]["ConfigPreviewRequest"];
+export type ConfigApplyRequest = components["schemas"]["ConfigApplyRequest"];
+export type TemplateOut = components["schemas"]["TemplateOut"];
+export type TemplateListOut = components["schemas"]["TemplateListOut"];
+export type RepoAuditOut = components["schemas"]["RepoAuditOut"];
+export type RepoAuditListOut = components["schemas"]["RepoAuditListOut"];
+export type RepoRoleOut = components["schemas"]["RepoRoleOut"];
+export type RepoRoleListOut = components["schemas"]["RepoRoleListOut"];
+export type RepoPermissionRequest = components["schemas"]["RepoPermissionRequest"];
+
 // Agent log frames are hand-written in the backend; the contract does not
 // expose a schema for them.
 export interface LogEntry {

@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     github_app_slug: str = ""
     github_app_private_key: str = ""
     github_app_webhook_secret: str = ""
+    # Point at a GitHub Enterprise Server API if needed, e.g.
+    # https://ghe.example.com/api/v3
+    github_api_base_url: str = "https://api.github.com"
 
     # Versioned envelope-encryption keys for the repository secrets vault.
     # Previous KEKs use "v1:<secret>,v2:<secret>" so rotation never breaks reads.

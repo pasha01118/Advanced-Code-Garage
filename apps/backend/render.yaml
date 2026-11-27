@@ -35,6 +35,8 @@ services:
         sync: false
       - key: GITHUB_APP_WEBHOOK_SECRET
         sync: false
+      - key: GITHUB_API_BASE_URL
+        value: "https://api.github.com"
       - key: VAULT_KEK_VERSION
         value: "v1"
       - key: VAULT_PREVIOUS_KEKS

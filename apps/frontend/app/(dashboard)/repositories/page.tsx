@@ -222,12 +222,20 @@ export default function RepositoriesPage() {
                   </a>
                 )}
               </div>
-              <Link
-                href="/secrets"
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-1.5 text-xs text-slate-400 hover:border-blue-800 hover:text-blue-300"
-              >
-                <KeyRound className="h-3.5 w-3.5" /> Manage secrets
-              </Link>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  href={`/repositories/${encodeURIComponent(repo.id)}`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+                >
+                  <FolderGit2 className="h-3.5 w-3.5" /> Open workspace
+                </Link>
+                <Link
+                  href="/secrets"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-1.5 text-xs text-slate-400 hover:border-blue-800 hover:text-blue-300"
+                >
+                  <KeyRound className="h-3.5 w-3.5" /> Manage secrets
+                </Link>
+              </div>
             </div>
           ))}
         </div>
