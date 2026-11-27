@@ -803,6 +803,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/github/installations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Installations */
+        get: operations["list_installations_api_v1_github_installations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/installations/{installation_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Installation */
+        post: operations["sync_installation_api_v1_github_installations__installation_id__sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Repositories */
+        get: operations["list_repositories_api_v1_repositories__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{repository_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Repository */
+        get: operations["get_repository_api_v1_repositories__repository_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/secrets/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Secrets */
+        get: operations["list_secrets_api_v1_secrets__get"];
+        put?: never;
+        /** Save Secret */
+        post: operations["save_secret_api_v1_secrets__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/secrets/{secret_id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Secret Audit */
+        get: operations["secret_audit_api_v1_secrets__secret_id__audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/secrets/{secret_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Secret */
+        delete: operations["revoke_secret_api_v1_secrets__secret_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1076,6 +1196,36 @@ export interface components {
         HistoryListOut: {
             /** Entries */
             entries: components["schemas"]["HistoryEntryOut"][];
+        };
+        /** InstallationListOut */
+        InstallationListOut: {
+            /** Installations */
+            installations: components["schemas"]["InstallationOut"][];
+        };
+        /** InstallationOut */
+        InstallationOut: {
+            /** Id */
+            id: string;
+            /** Installation Id */
+            installation_id: number;
+            /** Account Login */
+            account_login: string;
+            /**
+             * Account Type
+             * @default
+             */
+            account_type: string;
+            /**
+             * Suspended
+             * @default false
+             */
+            suspended: boolean;
+            /** Linked By */
+            linked_by?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
         };
         /** LogHistoryEntryOut */
         LogHistoryEntryOut: {
@@ -1353,6 +1503,55 @@ export interface components {
              */
             suggestion: string;
         };
+        /** RepositoryListOut */
+        RepositoryListOut: {
+            /** Repositories */
+            repositories: components["schemas"]["RepositoryOut"][];
+        };
+        /** RepositoryOut */
+        RepositoryOut: {
+            /** Id */
+            id: string;
+            /** Installation Id */
+            installation_id: number;
+            /** External Id */
+            external_id: number;
+            /** Full Name */
+            full_name: string;
+            /** Name */
+            name: string;
+            /** Owner Login */
+            owner_login: string;
+            /**
+             * Private
+             * @default false
+             */
+            private: boolean;
+            /**
+             * Default Branch
+             * @default main
+             */
+            default_branch: string;
+            /**
+             * Html Url
+             * @default
+             */
+            html_url: string;
+            /**
+             * Archived
+             * @default false
+             */
+            archived: boolean;
+            /**
+             * Disabled
+             * @default false
+             */
+            disabled: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
         /** RunSentinelOut */
         RunSentinelOut: {
             /** Events Added */
@@ -1382,6 +1581,101 @@ export interface components {
             subtitle?: string | null;
             /** Href */
             href: string;
+        };
+        /** SecretAuditListOut */
+        SecretAuditListOut: {
+            /** Entries */
+            entries: components["schemas"]["SecretAuditOut"][];
+        };
+        /** SecretAuditOut */
+        SecretAuditOut: {
+            /** Id */
+            id: string;
+            /** Secret Id */
+            secret_id: string;
+            /** Actor */
+            actor: string;
+            /** Action */
+            action: string;
+            /**
+             * Purpose
+             * @default
+             */
+            purpose: string;
+            /**
+             * Request Id
+             * @default
+             */
+            request_id: string;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** SecretCreateRequest */
+        SecretCreateRequest: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
+            /**
+             * Scope
+             * @default repository
+             * @enum {string}
+             */
+            scope: "user" | "repository" | "environment";
+            /** Repository Id */
+            repository_id?: string | null;
+            /** Environment */
+            environment?: string | null;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+        };
+        /** SecretListOut */
+        SecretListOut: {
+            /** Secrets */
+            secrets: components["schemas"]["SecretOut"][];
+        };
+        /** SecretOut */
+        SecretOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "user" | "repository" | "environment";
+            /** Repository Id */
+            repository_id?: string | null;
+            /** Environment */
+            environment?: string | null;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /** Version */
+            version: number;
+            /** Created By */
+            created_by: string;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Revoked At */
+            revoked_at?: string | null;
+        };
+        /** SecretRevokeOut */
+        SecretRevokeOut: {
+            /** Id */
+            id: string;
+            /** Revoked */
+            revoked: boolean;
         };
         /** SentinelDiscussionEntryOut */
         SentinelDiscussionEntryOut: {
@@ -1510,6 +1804,17 @@ export interface components {
              * @default 60
              */
             duration_minutes: number;
+        };
+        /** SyncOut */
+        SyncOut: {
+            /** Installation Id */
+            installation_id: number;
+            /** Repositories Added */
+            repositories_added: number;
+            /** Repositories Updated */
+            repositories_updated: number;
+            /** Total */
+            total: number;
         };
         /** UpdateAccountOut */
         UpdateAccountOut: {
@@ -3003,6 +3308,238 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BulkProjectResultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_installations_api_v1_github_installations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationListOut"];
+                };
+            };
+        };
+    };
+    sync_installation_api_v1_github_installations__installation_id__sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_repositories_api_v1_repositories__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepositoryListOut"];
+                };
+            };
+        };
+    };
+    get_repository_api_v1_repositories__repository_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repository_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepositoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_secrets_api_v1_secrets__get: {
+        parameters: {
+            query?: {
+                repository_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_secret_api_v1_secrets__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SecretCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    secret_audit_api_v1_secrets__secret_id__audit_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                secret_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretAuditListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_secret_api_v1_secrets__secret_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Request-ID"?: string;
+            };
+            path: {
+                secret_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretRevokeOut"];
                 };
             };
             /** @description Validation Error */

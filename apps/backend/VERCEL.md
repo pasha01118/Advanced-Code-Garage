@@ -41,8 +41,39 @@ Copy these from the Render service (same names, same values):
 | `ENVIRONMENT` | `production` |
 | `SENTINEL_INTERVAL_SECONDS` | informational on serverless |
 | `CRON_SECRET` | new random secret; Vercel Cron sends it as `Authorization: Bearer …` |
+| `GITHUB_APP_ID` | numeric GitHub App ID |
+| `GITHUB_APP_SLUG` | App URL slug (informational) |
+| `GITHUB_APP_PRIVATE_KEY` | PEM private key; literal `\n` escapes are accepted |
+| `GITHUB_APP_WEBHOOK_SECRET` | used to verify `X-Hub-Signature-256` |
+| `VAULT_KEK_VERSION` | current repository-secrets key version, e.g. `v1` |
+| `VAULT_PREVIOUS_KEKS` | `v1:<old-secret>,…` while rotating a KEK |
+
+`USER_KEY_ENCRYPTION_KEY` should be a dedicated 32+ character secret in
+production. It protects both AI provider keys and repository secrets; never
+reuse a placeholder value.
 
 `VERCEL=1` is set automatically by the platform and must not be added manually.
+
+## GitHub App setup
+
+1. Create a GitHub App with **Contents: Read & write**, **Pull requests:
+   Read & write**, **Metadata: Read-only**, and **Webhooks** enabled.
+2. Subscribe to `installation`, `installation_repositories`, `repository`,
+   and `push` events.
+3. Set the webhook URL to the deployed backend:
+   `https://agc-backend-ix19.onrender.com/api/v1/github/webhook` while Render is
+   primary. Copy the webhook secret into `GITHUB_APP_WEBHOOK_SECRET`.
+4. Generate a private key, store its PEM text in `GITHUB_APP_PRIVATE_KEY`, and
+   set `GITHUB_APP_ID`. Literal `\n` escapes in the PEM are accepted.
+5. Install the App on the target account/organization. The first webhook
+   registers the installation; an admin can then call
+   `POST /api/v1/github/installations/{id}/sync` (or use **Repositories → Sync**
+   in the dashboard).
+6. Apply `sql/0006_github_vault.sql` before using repositories or the secrets
+   vault.
+
+No personal access token is stored. Installation tokens are minted on demand
+from the App private key and are never sent to the browser.
 
 ## What changes on serverless
 
@@ -61,7 +92,8 @@ Copy these from the Render service (same names, same values):
   live log events are only seen by streams on the same instance.
 - **Migrations:** still manual. Apply `sql/*.sql` with
   `scripts/apply_migrations.py` against your database; nothing runs them at
-  startup on either platform.
+  startup on either platform. `0006_github_vault.sql` creates the GitHub App
+  and encrypted-secrets tables.
 
 ## Verify
 

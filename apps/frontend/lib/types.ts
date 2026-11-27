@@ -69,6 +69,18 @@ export type AuditEntryOut = components["schemas"]["AuditEntryOut"];
 export type AuditListOut = components["schemas"]["AuditListOut"];
 export type MetricPointOut = components["schemas"]["MetricPointOut"];
 export type MetricsOverviewOut = components["schemas"]["MetricsOverviewOut"];
+export type InstallationOut = components["schemas"]["InstallationOut"];
+export type InstallationListOut = components["schemas"]["InstallationListOut"];
+export type SyncOut = components["schemas"]["SyncOut"];
+export type RepositoryOut = components["schemas"]["RepositoryOut"];
+export type RepositoryListOut = components["schemas"]["RepositoryListOut"];
+export type SecretScope = components["schemas"]["SecretCreateRequest"]["scope"];
+export type SecretCreateRequest = components["schemas"]["SecretCreateRequest"];
+export type SecretOut = components["schemas"]["SecretOut"];
+export type SecretListOut = components["schemas"]["SecretListOut"];
+export type SecretRevokeOut = components["schemas"]["SecretRevokeOut"];
+export type SecretAuditOut = components["schemas"]["SecretAuditOut"];
+export type SecretAuditListOut = components["schemas"]["SecretAuditListOut"];
 
 // Agent log frames are hand-written in the backend; the contract does not
 // expose a schema for them.

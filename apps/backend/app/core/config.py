@@ -50,6 +50,18 @@ class Settings(BaseSettings):
     # Bearer token required by the Vercel Cron endpoint that replaces the
     # in-process Sentinel loop on serverless runtimes.
     cron_secret: str = ""
+
+    # GitHub App foundation. Private key is PEM text with literal \n allowed.
+    github_app_id: str = ""
+    github_app_slug: str = ""
+    github_app_private_key: str = ""
+    github_app_webhook_secret: str = ""
+
+    # Versioned envelope-encryption keys for the repository secrets vault.
+    # Previous KEKs use "v1:<secret>,v2:<secret>" so rotation never breaks reads.
+    vault_kek_version: str = "v1"
+    vault_previous_keks: str = ""
+
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
 

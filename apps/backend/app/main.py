@@ -113,6 +113,9 @@ from app.api.v1.notifications.route import router as notifications_router  # noq
 from app.api.v1.preferences.route import router as preferences_router  # noqa: E402
 from app.api.v1.terminal.route import router as terminal_router  # noqa: E402
 from app.api.v1.workspace.route import router as workspace_router  # noqa: E402
+from app.api.v1.github.route import router as github_router  # noqa: E402
+from app.api.v1.repositories.route import router as repositories_router  # noqa: E402
+from app.api.v1.secrets.route import router as secrets_router  # noqa: E402
 
 app.include_router(agents_router)
 app.include_router(
@@ -147,3 +150,6 @@ app.include_router(
     dependencies=[Depends(require_service("telemetry"))],
 )
 app.include_router(workspace_router, prefix='/api/v1/workspace', tags=['workspace'])
+app.include_router(github_router, prefix='/api/v1/github', tags=['github'])
+app.include_router(repositories_router, prefix='/api/v1/repositories', tags=['repositories'])
+app.include_router(secrets_router, prefix='/api/v1/secrets', tags=['secrets'])

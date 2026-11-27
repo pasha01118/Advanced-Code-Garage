@@ -25,6 +25,20 @@ services:
         sync: false
       - key: ADMIN_USER_IDS
         sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_APP_SLUG
+        sync: false
+      - key: GITHUB_APP_PRIVATE_KEY
+        sync: false
+      - key: GITHUB_APP_WEBHOOK_SECRET
+        sync: false
+      - key: VAULT_KEK_VERSION
+        value: "v1"
+      - key: VAULT_PREVIOUS_KEKS
+        sync: false
       - key: GOOGLE_AI_STUDIO_KEY
         sync: false
       - key: GOOGLE_AI_STUDIO_PROXY

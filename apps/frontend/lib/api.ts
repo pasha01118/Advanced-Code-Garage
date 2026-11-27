@@ -45,6 +45,15 @@ import type {
   SearchOut,
   AuditListOut,
   MetricsOverviewOut,
+  InstallationListOut,
+  SyncOut,
+  RepositoryOut,
+  RepositoryListOut,
+  SecretAuditListOut,
+  SecretCreateRequest,
+  SecretListOut,
+  SecretOut,
+  SecretRevokeOut,
 } from "./types";
 import { supabase } from "./supabaseClient";
 
@@ -409,4 +418,46 @@ export function bulkProjectAction(payload: BulkProjectRequest): Promise<BulkProj
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+}
+
+// -- GitHub + secrets vault ---------------------------------------------------
+
+export function listGithubInstallations(): Promise<InstallationListOut> {
+  return requestAuthed("/v1/github/installations");
+}
+
+export function syncGithubInstallation(installationId: number): Promise<SyncOut> {
+  return requestAuthed(`/v1/github/installations/${installationId}/sync`, {
+    method: "POST",
+  });
+}
+
+export function listRepositories(): Promise<RepositoryListOut> {
+  return requestAuthed("/v1/repositories/");
+}
+
+export function getRepository(repositoryId: string): Promise<RepositoryOut> {
+  return requestAuthed(`/v1/repositories/${encodeURIComponent(repositoryId)}`);
+}
+
+export function listSecrets(repositoryId?: string): Promise<SecretListOut> {
+  return requestAuthed(`/v1/secrets/${queryString({ repository_id: repositoryId })}`);
+}
+
+export function saveSecret(payload: SecretCreateRequest): Promise<SecretOut> {
+  return requestAuthed("/v1/secrets/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function revokeSecret(secretId: string): Promise<SecretRevokeOut> {
+  return requestAuthed(`/v1/secrets/${encodeURIComponent(secretId)}`, {
+    method: "DELETE",
+  });
+}
+
+export function getSecretAudit(secretId: string): Promise<SecretAuditListOut> {
+  return requestAuthed(`/v1/secrets/${encodeURIComponent(secretId)}/audit`);
 }

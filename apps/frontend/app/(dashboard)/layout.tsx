@@ -15,6 +15,7 @@ import {
   Settings2,
   ScrollText,
   Server,
+  KeyRound,
 } from "lucide-react";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationCenter } from "@/components/notifications-center";
@@ -30,6 +31,8 @@ const NAV_ITEMS = [
   { href: "/ai-integration", label: "AI Integration", icon: Sparkles },
   { href: "/metrics", label: "Metrics", icon: Activity },
   { href: "/backend", label: "Backend", icon: Server },
+  { href: "/repositories", label: "Repositories", icon: FolderGit2 },
+  { href: "/secrets", label: "Secrets", icon: KeyRound },
   { href: "/preferences", label: "Preferences", icon: Settings2 },
   { href: "/audit", label: "Audit Log", icon: ScrollText, admin: true },
   { href: "/admin", label: "Control Panel", icon: ShieldCheck, admin: true },
