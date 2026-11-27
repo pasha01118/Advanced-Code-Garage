@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 
+from app.core.config import get_settings
 from app.core.event_bus import bus
 from app.repositories.agent_logs import AgentLogsRepository
 from app.repositories.projects import ProjectsRepository
@@ -94,9 +95,14 @@ class ProjectService:
             owner_id=owner_id,
         )
         await self.projects.update(project_id, status="analyzing", progress=10)
-        task = asyncio.create_task(self._run_pipeline(project_id, owner_id))
-        _pipeline_tasks.add(task)
-        task.add_done_callback(_pipeline_tasks.discard)
+        if get_settings().is_serverless:
+            # A detached task can be frozen when a serverless invocation returns.
+            # Finish the pipeline before responding so the project is durable.
+            await self._run_pipeline(project_id, owner_id)
+        else:
+            task = asyncio.create_task(self._run_pipeline(project_id, owner_id))
+            _pipeline_tasks.add(task)
+            task.add_done_callback(_pipeline_tasks.discard)
         return await self.projects.get(project_id)
 
     async def get(self, project_id: str, owner_id: str | None = None) -> dict | None:

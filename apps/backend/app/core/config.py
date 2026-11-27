@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic import AliasChoices, Field
@@ -46,6 +47,9 @@ class Settings(BaseSettings):
     auth_rate_limit_per_minute: int = Field(default=10, ge=1)
     # Only these socket peers may supply X-Forwarded-For (e.g. Render's proxies).
     trusted_proxy_cidrs: str = ""
+    # Bearer token required by the Vercel Cron endpoint that replaces the
+    # in-process Sentinel loop on serverless runtimes.
+    cron_secret: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
 
@@ -70,6 +74,11 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"
+
+    @property
+    def is_serverless(self) -> bool:
+        """Vercel Functions are per-request, so process-lifetime work cannot run."""
+        return bool(os.environ.get("VERCEL"))
 
 
 @lru_cache

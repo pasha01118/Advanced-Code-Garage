@@ -1,7 +1,8 @@
 import asyncio
+import hmac
 import logging
 from contextlib import asynccontextmanager
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
@@ -32,14 +33,21 @@ async def _sentinel_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _sentinel_task
-    _sentinel_task = asyncio.create_task(_sentinel_loop())
-    yield
-    _sentinel_task.cancel()
+    # Vercel Functions are per-request; a task started here would be killed
+    # with the invocation and duplicated across concurrent instances.
+    if not settings.is_serverless:
+        _sentinel_task = asyncio.create_task(_sentinel_loop())
     try:
-        await _sentinel_task
-    except asyncio.CancelledError:
-        pass
-    cancel_pipeline_tasks()
+        yield
+    finally:
+        if _sentinel_task is not None:
+            _sentinel_task.cancel()
+            try:
+                await _sentinel_task
+            except asyncio.CancelledError:
+                pass
+            _sentinel_task = None
+        cancel_pipeline_tasks()
 
 
 app = FastAPI(
@@ -73,6 +81,26 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "agents": "active"}
+
+
+@app.get("/api/cron/sentinel", include_in_schema=False)
+async def sentinel_cron(authorization: str | None = Header(default=None)):
+    """Scheduled replacement for the background Sentinel loop on serverless.
+
+    Vercel Cron sends the configured CRON_SECRET as a bearer token. The route is
+    excluded from OpenAPI because it is infrastructure-only and the published
+    contract must stay identical across both deployment targets.
+    """
+    if not settings.cron_secret:
+        raise HTTPException(status_code=503, detail="Cron secret is not configured")
+    expected = f"Bearer {settings.cron_secret}"
+    if not authorization or not hmac.compare_digest(
+        authorization.encode(), expected.encode()
+    ):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    result = await get_sentinel_service().run_cycle()
+    return {"status": "ok", **result}
+
 
 # Import Routers
 from app.routers.agents import router as agents_router  # noqa: E402
